@@ -5,9 +5,11 @@ import {
   BrandMark,
   ChoiceCard,
   ChoiceChip,
+  ConsentCard,
   DecorativeOnboardingCard,
   EyeIcon,
   InputField,
+  InlineErrorMessage,
   LinkButton,
   PrimaryButton,
   ProgressBars,
@@ -16,7 +18,8 @@ import {
   ToggleCard,
   TopBar,
 } from './ui';
-import { notificationOptions, onboardingInterests, onboardingPurposes } from './session-types';
+import { consentOptions, onboardingPurposeOptions } from './session-content';
+import { notificationOptions, onboardingInterests } from './session-types';
 import type { FormEvent } from 'react';
 
 function getErrorMessage(error: unknown) {
@@ -93,11 +96,7 @@ export function LoginPage() {
             </LinkButton>
           </div>
 
-          {error ? (
-            <p className='rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-medium text-rose-700'>
-              {error}
-            </p>
-          ) : null}
+          {error ? <InlineErrorMessage message={error} /> : null}
 
           <PrimaryButton type='submit' disabled={isSubmitting} className='w-full'>
             {isSubmitting ? 'Signing in...' : 'Continue'}
@@ -229,11 +228,7 @@ export function SignupPage() {
             student.
           </div>
 
-          {error ? (
-            <p className='rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-medium text-rose-700'>
-              {error}
-            </p>
-          ) : null}
+          {error ? <InlineErrorMessage message={error} /> : null}
 
           <PrimaryButton type='submit' className='w-full'>
             Join Now
@@ -308,73 +303,16 @@ export function TermsPage() {
       </div>
 
       <div className='mt-8 space-y-4'>
-        <label className='block'>
-          <div className='rounded-[24px] bg-white p-4 shadow-[0_14px_30px_rgba(16,34,64,0.06)]'>
-            <div className='flex gap-4'>
-              <input
-                type='checkbox'
-                checked={state.consent.terms}
-                onChange={(event) => actions.setConsent('terms', event.target.checked)}
-                className='mt-1 h-5 w-5 rounded border-slate-300 text-[#123f7a] focus:ring-[#123f7a]'
-              />
-              <div className='space-y-2'>
-                <h2 className='text-[17px] font-bold text-[#11254b]'>Terms of Service</h2>
-                <p className='text-[14px] leading-[1.45] text-slate-500'>
-                  I agree to the guidelines governing communication, intellectual property, and
-                  community standards on the Gachon Connect platform.
-                </p>
-                <span className='inline-flex items-center gap-2 text-[12px] font-extrabold uppercase tracking-[0.16em] text-[#1f76a7]'>
-                  Read full policy
-                </span>
-              </div>
-            </div>
-          </div>
-        </label>
-
-        <label className='block'>
-          <div className='rounded-[24px] bg-white p-4 shadow-[0_14px_30px_rgba(16,34,64,0.06)]'>
-            <div className='flex gap-4'>
-              <input
-                type='checkbox'
-                checked={state.consent.privacy}
-                onChange={(event) => actions.setConsent('privacy', event.target.checked)}
-                className='mt-1 h-5 w-5 rounded border-slate-300 text-[#123f7a] focus:ring-[#123f7a]'
-              />
-              <div className='space-y-2'>
-                <h2 className='text-[17px] font-bold text-[#11254b]'>Privacy Policy</h2>
-                <p className='text-[14px] leading-[1.45] text-slate-500'>
-                  I acknowledge how Gachon Connect collects, stores, and uses my academic and
-                  personal data to provide a personalized experience.
-                </p>
-                <span className='inline-flex items-center gap-2 text-[12px] font-extrabold uppercase tracking-[0.16em] text-[#1f76a7]'>
-                  Read full policy
-                </span>
-              </div>
-            </div>
-          </div>
-        </label>
-
-        <label className='block'>
-          <div className='rounded-[24px] bg-white p-4 shadow-[0_14px_30px_rgba(16,34,64,0.06)]'>
-            <div className='flex gap-4'>
-              <input
-                type='checkbox'
-                checked={state.consent.marketing}
-                onChange={(event) => actions.setConsent('marketing', event.target.checked)}
-                className='mt-1 h-5 w-5 rounded border-slate-300 text-[#123f7a] focus:ring-[#123f7a]'
-              />
-              <div className='space-y-2'>
-                <h2 className='text-[17px] font-bold text-[#11254b]'>
-                  Marketing Consent (Optional)
-                </h2>
-                <p className='text-[14px] leading-[1.45] text-slate-500'>
-                  Receive updates about campus events, AI research opportunities, and academic
-                  symposia.
-                </p>
-              </div>
-            </div>
-          </div>
-        </label>
+        {consentOptions.map((option) => (
+          <ConsentCard
+            key={option.field}
+            title={option.title}
+            description={option.description}
+            checked={state.consent[option.field]}
+            onChange={(value) => actions.setConsent(option.field, value)}
+            linkLabel={option.linkLabel}
+          />
+        ))}
       </div>
 
       <div className='mt-auto pt-8'>
@@ -435,22 +373,14 @@ export function PreferencesPage() {
         </div>
 
         <div className='space-y-3'>
-          {onboardingPurposes.map((purpose) => (
+          {onboardingPurposeOptions.map((purpose) => (
             <ChoiceCard
-              key={purpose}
-              title={purpose}
-              description={
-                purpose === 'Academic Study'
-                  ? 'Connect with peer mentors and find focused study circles.'
-                  : purpose === 'Cultural Exchange'
-                    ? 'Explore global perspectives and shared traditions.'
-                    : 'Find your community and social activities on campus.'
-              }
-              selected={state.preferences.purpose === purpose}
-              onClick={() => actions.setPurpose(purpose)}
-              icon={
-                purpose === 'Academic Study' ? '📘' : purpose === 'Cultural Exchange' ? '🌐' : '👥'
-              }
+              key={purpose.value}
+              title={purpose.title}
+              description={purpose.description}
+              selected={state.preferences.purpose === purpose.value}
+              onClick={() => actions.setPurpose(purpose.value)}
+              icon={purpose.icon}
             />
           ))}
         </div>

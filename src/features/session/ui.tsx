@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 import type { ReactNode } from 'react';
-import type { OnboardingInterest, OnboardingPurpose } from './session-types';
+import type { OnboardingInterest } from './session-types';
 
 type FrameProps = {
   children: ReactNode;
@@ -32,6 +32,14 @@ type ToggleCardProps = {
   onToggle: (_next: boolean) => void;
   accent?: 'blue' | 'pink' | 'rose';
   iconLabel?: string;
+};
+
+type ConsentCardProps = {
+  title: string;
+  description: string;
+  checked: boolean;
+  onChange: (_checked: boolean) => void;
+  linkLabel?: string;
 };
 
 function Icon({ children, className }: { children: ReactNode; className?: string }) {
@@ -329,6 +337,14 @@ export function LinkButton({ children, onClick, className }: ButtonProps) {
   );
 }
 
+export function InlineErrorMessage({ message }: { message: string }) {
+  return (
+    <p className='rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-medium text-rose-700'>
+      {message}
+    </p>
+  );
+}
+
 export function BackButton({ onClick }: { onClick: () => void }) {
   return (
     <button
@@ -338,6 +354,38 @@ export function BackButton({ onClick }: { onClick: () => void }) {
     >
       <ArrowLeftIcon />
     </button>
+  );
+}
+
+export function ConsentCard({
+  title,
+  description,
+  checked,
+  onChange,
+  linkLabel,
+}: ConsentCardProps) {
+  return (
+    <label className='block'>
+      <div className='rounded-[24px] bg-white p-4 shadow-[0_14px_30px_rgba(16,34,64,0.06)]'>
+        <div className='flex gap-4'>
+          <input
+            type='checkbox'
+            checked={checked}
+            onChange={(event) => onChange(event.target.checked)}
+            className='mt-1 h-5 w-5 rounded border-slate-300 text-[#123f7a] focus:ring-[#123f7a]'
+          />
+          <div className='space-y-2'>
+            <h2 className='text-[17px] font-bold text-[#11254b]'>{title}</h2>
+            <p className='text-[14px] leading-[1.45] text-slate-500'>{description}</p>
+            {linkLabel ? (
+              <span className='inline-flex items-center gap-2 text-[12px] font-extrabold uppercase tracking-[0.16em] text-[#1f76a7]'>
+                {linkLabel}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </label>
   );
 }
 
@@ -427,7 +475,7 @@ export function ChoiceCard({
   onClick,
   icon,
 }: {
-  title: OnboardingPurpose;
+  title: string;
   description: string;
   selected: boolean;
   onClick: () => void;
