@@ -100,28 +100,6 @@ function BellIcon() {
   );
 }
 
-function StarIcon() {
-  return (
-    <svg aria-hidden='true' viewBox='0 0 24 24' className='h-5 w-5'>
-      <path
-        d='m12 4 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.4 7.2 19l.9-5.4-3.9-3.8 5.4-.8L12 4Z'
-        fill='currentColor'
-      />
-    </svg>
-  );
-}
-
-function HeartIcon() {
-  return (
-    <svg aria-hidden='true' viewBox='0 0 24 24' className='h-5 w-5'>
-      <path
-        d='M12 20s-7-4.6-7-10.2C5 6.7 6.7 5 8.7 5c1.4 0 2.6.8 3.3 2 .7-1.2 1.9-2 3.3-2 2 0 3.7 1.7 3.7 4.8C19 15.4 12 20 12 20Z'
-        fill='currentColor'
-      />
-    </svg>
-  );
-}
-
 function HomeIcon() {
   return (
     <svg aria-hidden='true' viewBox='0 0 24 24' className='h-5 w-5'>
@@ -556,90 +534,55 @@ export function ToggleCard({
   );
 }
 
-export function MainActionButton({ icon, active = false }: { icon: ReactNode; active?: boolean }) {
-  return (
-    <button
-      type='button'
-      className={clsx(
-        'flex h-14 w-14 items-center justify-center rounded-full border transition',
-        active
-          ? 'border-transparent bg-[#123f7a] text-white shadow-[0_16px_30px_rgba(18,63,122,0.22)]'
-          : 'border-slate-200 bg-white text-[#cb3940] shadow-[0_10px_24px_rgba(16,34,64,0.08)]',
-      )}
-    >
-      {icon}
-    </button>
-  );
-}
+export type BottomTabKey = 'main' | 'group' | 'activity' | 'mypage';
 
 export function BottomTabs({
   active = 'main',
+  onNavigate,
+  tone = 'default',
 }: {
-  active?: 'main' | 'group' | 'activity' | 'mypage';
+  active?: BottomTabKey;
+  onNavigate?: (_tab: BottomTabKey) => void;
+  tone?: 'default' | 'subtle';
 }) {
   const tabClass = (key: typeof active) =>
     clsx(
       'flex flex-1 flex-col items-center gap-1 rounded-[18px] py-2 text-[10px] font-extrabold uppercase tracking-[0.15em] transition',
-      active === key ? 'text-[#123f7a]' : 'text-slate-400',
+      active === key ? 'text-[#123f7a]' : tone === 'subtle' ? 'text-slate-300' : 'text-slate-400',
     );
 
   return (
-    <nav className='rounded-[26px] border border-white/70 bg-white/95 px-3 py-2 shadow-[0_14px_36px_rgba(16,34,64,0.08)] backdrop-blur'>
+    <nav
+      className={clsx(
+        'rounded-[26px] px-3 py-2 backdrop-blur',
+        tone === 'subtle'
+          ? 'border border-white/70 bg-white/75 shadow-[0_10px_24px_rgba(16,34,64,0.05)]'
+          : 'border border-white/70 bg-white/95 shadow-[0_14px_36px_rgba(16,34,64,0.08)]',
+      )}
+    >
       <div className='flex items-center gap-1'>
-        <button type='button' className={tabClass('main')}>
+        <button type='button' className={tabClass('main')} onClick={() => onNavigate?.('main')}>
           <HomeIcon />
           <span>Main</span>
         </button>
-        <button type='button' className={tabClass('group')}>
+        <button type='button' className={tabClass('group')} onClick={() => onNavigate?.('group')}>
           <GroupIcon />
           <span>Group</span>
         </button>
-        <button type='button' className={tabClass('activity')}>
+        <button
+          type='button'
+          className={tabClass('activity')}
+          onClick={() => onNavigate?.('activity')}
+        >
           <CompassIcon />
           <span>Activity</span>
         </button>
-        <button type='button' className={tabClass('mypage')}>
+        <button type='button' className={tabClass('mypage')} onClick={() => onNavigate?.('mypage')}>
           <UserIcon />
           <span>My Page</span>
         </button>
       </div>
     </nav>
-  );
-}
-
-export function MainDiscoveryHero() {
-  return (
-    <article className='overflow-hidden rounded-[36px] bg-white shadow-[0_22px_60px_rgba(16,34,64,0.10)]'>
-      <div className='relative h-[380px] overflow-hidden rounded-[36px] bg-[radial-gradient(circle_at_18%_18%,rgba(255,197,90,0.32),transparent_28%),radial-gradient(circle_at_78%_28%,rgba(255,127,80,0.26),transparent_24%),linear-gradient(135deg,#0d4664_0%,#14677d_34%,#11182f_100%)]'>
-        <div className='absolute inset-0 bg-[linear-gradient(180deg,rgba(5,10,24,0)_0%,rgba(5,10,24,0.1)_40%,rgba(5,10,24,0.62)_100%)]' />
-        <div className='absolute left-0 top-0 h-full w-full bg-[radial-gradient(circle_at_16%_52%,rgba(255,255,255,0.14),transparent_18%),radial-gradient(circle_at_58%_40%,rgba(255,255,255,0.12),transparent_15%),radial-gradient(circle_at_76%_62%,rgba(255,255,255,0.11),transparent_15%)]' />
-        <div className='relative flex h-full flex-col justify-between p-5'>
-          <span className='inline-flex w-fit items-center rounded-full bg-[#ca3535] px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.18em] text-white shadow-[0_12px_22px_rgba(202,53,53,0.24)]'>
-            Hot Trending
-          </span>
-          <div className='space-y-2 text-white'>
-            <h2 className='max-w-[9ch] text-[36px] font-extrabold leading-[0.95] tracking-[-0.05em]'>
-              Gachon Dev Studio
-            </h2>
-            <p className='text-[14px] font-semibold text-white/88'>24 Members Active</p>
-          </div>
-        </div>
-      </div>
-      <div className='space-y-4 px-5 py-5'>
-        <p className='max-w-[26ch] text-[16px] leading-[1.55] text-slate-500'>
-          Creating the next generation of campus solutions. Join us for weekly sprints, tech talks,
-          and pizza.
-        </p>
-        <div className='flex gap-3'>
-          <span className='rounded-full bg-[#edf3ff] px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#2e56be]'>
-            Software
-          </span>
-          <span className='rounded-full bg-[#edf3ff] px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#2e56be]'>
-            Design
-          </span>
-        </div>
-      </div>
-    </article>
   );
 }
 
@@ -670,4 +613,4 @@ export function DecorativeOnboardingCard({
   );
 }
 
-export { BellIcon, EyeIcon, HeartIcon, Icon, StarIcon, ArrowLeftIcon };
+export { BellIcon, EyeIcon, Icon, ArrowLeftIcon };

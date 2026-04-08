@@ -1,5 +1,8 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom';
 import App from './App';
+import GroupDetailPage from './pages/group/GroupDetailPage';
+import GroupPage from './pages/group/GroupPage';
+import NewGroupPostPage from './pages/group/NewGroupPostPage';
 import MainPage from './pages/MainPage';
 import {
   LoginPage,
@@ -59,6 +62,18 @@ const router = createBrowserRouter([
           {
             path: 'main',
             element: <MainPage />,
+          },
+          {
+            path: 'group',
+            element: <GroupPage />,
+          },
+          {
+            path: 'group/new',
+            element: <NewGroupPostPage />,
+          },
+          {
+            path: 'group/:groupId',
+            element: <GroupDetailPage />,
           },
         ],
       },
