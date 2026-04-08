@@ -67,6 +67,7 @@
 * Separate screen orchestration from reusable UI.
 * Isolate API response mapping near the API layer so backend response changes do not ripple through the UI.
 * Use explicit TypeScript contracts for props, API DTOs, and view models. Avoid `any` unless there is a temporary migration reason.
+* If two screens serve essentially the same function, reuse the existing component even when the visual styling differs slightly. Prefer variants and props over duplicate components.
 
 ## Validation rules
 
@@ -84,7 +85,7 @@
 ## Agent roles
 
 * `pm-tech-lead`: map the request to screen docs, plan the work, enforce the code convention, delegate, integrate results, and ask for PR approval.
-* `ui-builder`: implement UI from `flow.md` and `design` while extracting reusable pure components cleanly.
+* `ui-builder`: implement UI from `flow.md` and `design` while extracting reusable pure components cleanly and reusing existing same-purpose components when the structure matches.
 * `feature-builder`: implement behavior and API integration from `flow.md` and `api`, with future backend response changes in mind.
 * `reviewer`: check correctness, regression risk, code convention violations, and mismatches between implementation and docs.
 * `qa-tester`: verify the implemented flow against `flow.md`, `design`, and `api`.
