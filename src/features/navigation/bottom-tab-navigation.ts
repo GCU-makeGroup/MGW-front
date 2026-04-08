@@ -4,6 +4,7 @@ import type { BottomTabKey } from '../session/ui';
 const primaryTabRoutes: Partial<Record<BottomTabKey, string>> = {
   main: '/main',
   group: '/group',
+  activity: '/activity',
 };
 
 export function navigateFromBottomTab(navigate: NavigateFunction, tab: BottomTabKey) {
