@@ -1,3 +1,4 @@
+import { Navigate } from 'react-router-dom';
 import { useSession } from '../features/session/session-context';
 import {
   BellIcon,
@@ -11,6 +12,10 @@ import {
 
 function MainPage() {
   const { state } = useSession();
+
+  if (!state.isAuthenticated) {
+    return <Navigate to='/onboard/login' replace />;
+  }
 
   return (
     <ScreenFrame className='pb-4 pt-4'>

@@ -1,5 +1,14 @@
 @import 'tailwindcss';
 
+:root {
+  color: #102143;
+  background: #f7faff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 @font-face {
   font-family: Pretendard;
   font-weight: 400;
@@ -100,7 +109,15 @@ a {
 
 button {
   cursor: pointer;
+  font: inherit;
 }
 button:disabled {
   cursor: not-allowed; /* 비활성화 상태에서는 막힌 커서 */
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
 }

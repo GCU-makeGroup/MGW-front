@@ -8,7 +8,7 @@ import prettier from 'eslint-plugin-prettier';
 import eslintConfigPrettier from 'eslint-config-prettier';
 
 export default defineConfig([
-  globalIgnores(['dist', 'src/features/onboarding/**', 'src/pages/onboarding/**']),
+  globalIgnores(['dist']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

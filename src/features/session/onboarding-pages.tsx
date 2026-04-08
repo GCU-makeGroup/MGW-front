@@ -131,9 +131,23 @@ export function SignupPage() {
   const { state, actions } = useSession();
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isConfirmVisible, setIsConfirmVisible] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const signupValidationError = getSignupValidationError({
+    confirmPassword: state.signup.confirmPassword,
+    fullName: state.signup.fullName,
+    password: state.signup.password,
+    universityEmail: state.signup.universityEmail,
+  });
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (signupValidationError) {
+      setError(signupValidationError);
+      return;
+    }
+
+    setError(null);
     navigate('/onboard/terms');
   };
 
@@ -215,6 +229,12 @@ export function SignupPage() {
             student.
           </div>
 
+          {error ? (
+            <p className='rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-medium text-rose-700'>
+              {error}
+            </p>
+          ) : null}
+
           <PrimaryButton type='submit' className='w-full'>
             Join Now
           </PrimaryButton>
@@ -235,6 +255,40 @@ export function SignupPage() {
       </div>
     </ScreenFrame>
   );
+}
+
+function getSignupValidationError({
+  confirmPassword,
+  fullName,
+  password,
+  universityEmail,
+}: {
+  confirmPassword: string;
+  fullName: string;
+  password: string;
+  universityEmail: string;
+}) {
+  if (!fullName.trim()) {
+    return '이름을 입력해 주세요.';
+  }
+
+  if (!universityEmail.trim()) {
+    return '학교 이메일 아이디를 입력해 주세요.';
+  }
+
+  if (!/^[a-zA-Z0-9._-]+$/.test(universityEmail.trim())) {
+    return '이메일 아이디에는 영문, 숫자, ._- 만 사용할 수 있습니다.';
+  }
+
+  if (password.length < 8) {
+    return '비밀번호는 8자 이상이어야 합니다.';
+  }
+
+  if (confirmPassword !== password) {
+    return '비밀번호 확인이 일치하지 않습니다.';
+  }
+
+  return null;
 }
 
 export function TermsPage() {

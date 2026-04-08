@@ -20,8 +20,8 @@ export type SignupRequest = {
   email: string;
   password: string;
   name: string;
-  major: string;
-  studentId: number;
+  major?: string;
+  studentId?: number;
   emailToken?: string;
 };
 

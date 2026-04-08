@@ -167,21 +167,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       return response.data;
     },
     async completeSignup() {
-      const hasBackendProfile =
-        state.signup.major.trim().length > 0 && state.signup.studentId.trim().length > 0;
+      const requestBody: SignupRequest = {
+        email: `${state.signup.universityEmail.trim()}@gachon.ac.kr`,
+        password: state.signup.password,
+        name: state.signup.fullName,
+        major: state.signup.major.trim() || undefined,
+        studentId: state.signup.studentId.trim() ? Number(state.signup.studentId) : undefined,
+        emailToken: state.signup.emailToken || undefined,
+      };
 
-      if (hasBackendProfile) {
-        const requestBody: SignupRequest = {
-          email: state.signup.universityEmail,
-          password: state.signup.password,
-          name: state.signup.fullName,
-          major: state.signup.major,
-          studentId: Number(state.signup.studentId),
-          emailToken: state.signup.emailToken || undefined,
-        };
-
-        await signupRequest(requestBody);
-      }
+      await signupRequest(requestBody);
 
       dispatch({ type: 'setAuthenticated', value: true });
     },
