@@ -67,3 +67,39 @@
 
 3. 모든 QA 및 버그 수정 완료 시 main으로 병합
 4. 긴급 수정은 hotfix 브랜치에서 진행 후, 병합
+
+---
+
+### **코드 컨벤션 (React Clean Component Convention)**
+
+본 프로젝트는 React 공식 문서의 컴포넌트 계층 분리, 순수 렌더링, 단일 상태 소유 원칙과 TypeScript의 명시적 타입 계약 방식을 기준으로 코드를 작성한다.
+
+- 화면 구현은 먼저 `docs/<screen>/flow.md`와 `docs/<screen>/design`을 기준으로 컴포넌트 계층을 나눈다.
+- 컴포넌트는 한 가지 역할에 집중한다.
+  - 화면 조합, 데이터 요청, 상태 orchestration은 screen/page 레이어에서 담당한다.
+  - 재사용 가능한 UI는 props 기반의 순수 컴포넌트로 분리한다.
+- 공유 상태는 가장 가까운 공통 부모가 소유한다.
+  - 같은 값을 여러 컴포넌트가 써야 하면 state를 복제하지 말고 올린 뒤 props로 전달한다.
+- 렌더링은 순수해야 한다.
+  - render 중 외부 변수 변경, props/state 직접 변경, 부수효과 실행을 금지한다.
+  - 부수효과는 event handler 또는 effect에서 처리한다.
+- 컴포넌트는 다른 컴포넌트 내부에서 새로 정의하지 않는다.
+  - 모든 컴포넌트는 파일의 top-level에 선언하여 재사용성과 상태 안정성을 유지한다.
+- 재사용 기준은 명확하게 나눈다.
+  - 두 화면 이상에서 재사용 가능하거나 도메인 독립적인 UI는 `src/components`에 둔다.
+  - 특정 화면 전용 조각은 해당 screen/page 가까이에 둔다.
+- API 연동 코드는 화면 UI와 분리한다.
+  - 백엔드 응답값 변경 가능성을 고려해 API 호출과 응답 매핑은 가능한 한 경계 레이어에 모은다.
+  - UI 컴포넌트 전반에 raw response shape를 직접 퍼뜨리지 않는다.
+- TypeScript 타입은 명시적으로 선언한다.
+  - props, API DTO, view model은 이름 있는 `type` 또는 `interface`로 관리한다.
+  - `any` 사용은 지양한다.
+  - `String`, `Number`, `Boolean`, `Object` 같은 boxed type 대신 `string`, `number`, `boolean`, `object`를 사용한다.
+
+참고 문서:
+- React Thinking in React: [https://react.dev/learn/thinking-in-react](https://react.dev/learn/thinking-in-react)
+- React Keeping Components Pure: [https://react.dev/learn/keeping-components-pure](https://react.dev/learn/keeping-components-pure)
+- React Sharing State Between Components: [https://react.dev/learn/sharing-state-between-components](https://react.dev/learn/sharing-state-between-components)
+- React static-components lint rule: [https://react.dev/reference/eslint-plugin-react-hooks/lints/static-components](https://react.dev/reference/eslint-plugin-react-hooks/lints/static-components)
+- TypeScript Object Types: [https://www.typescriptlang.org/docs/handbook/2/objects.html](https://www.typescriptlang.org/docs/handbook/2/objects.html)
+- TypeScript Do's and Don'ts: [https://www.typescriptlang.org/docs/handbook/declaration-files/do-s-and-don-ts.html](https://www.typescriptlang.org/docs/handbook/declaration-files/do-s-and-don-ts.html)
