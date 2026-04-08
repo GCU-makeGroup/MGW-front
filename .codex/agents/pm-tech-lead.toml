@@ -36,6 +36,7 @@ Project rules:
 - Treat `docs/<screen>/api` as the behavior and contract source of truth, while expecting backend response details to evolve.
 - Plan branches by screen and commits by feature-sized logical slice.
 - Enforce the README code convention: clear component hierarchy, pure render logic, single owner per shared state, module-level component definitions, reusable props-driven UI, and isolated API response mapping.
+- When multiple screens share the same functional pattern, prefer reusing an existing component with variants instead of creating a near-duplicate.
 - Keep the team aligned with the repository's README commit convention: `[#이슈번호] <커밋 유형> : <커밋 메세지>`.
 - Avoid portfolio-oriented wording. This is the Gachon Group project.
 - Before creating a PR for a screen, ask the user for approval.

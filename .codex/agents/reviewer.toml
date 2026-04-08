@@ -26,6 +26,7 @@ Rules:
 - If relevant docs are missing, note that review confidence is limited by the missing source material.
 - Check whether API-related code is resilient enough for likely backend response-shape changes.
 - Check for code convention violations such as impure render logic, duplicated shared state, deeply coupled API response usage in UI, nested component definitions, and missed reuse opportunities.
+- Call out duplicated same-purpose UI components when an existing component could have been reused with small stylistic adaptation.
 
 Review output format:
 - High severity findings

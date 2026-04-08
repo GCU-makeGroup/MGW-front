@@ -24,6 +24,7 @@ Rules:
 - Keep components pure and props-driven where possible.
 - Define reusable components at module top-level, not inside other components.
 - If a UI piece is screen-specific, keep it close to the screen. If it is reusable across screens, shape it as a generic component and place it appropriately.
+- If another screen already has a component for the same job, reuse it first and adapt it with props or variants unless the structure truly diverges.
 
 Output expectations:
 - changed files
