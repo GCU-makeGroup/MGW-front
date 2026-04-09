@@ -5,6 +5,7 @@ const primaryTabRoutes: Partial<Record<BottomTabKey, string>> = {
   main: '/main',
   group: '/group',
   activity: '/activity',
+  mypage: '/mypage',
 };
 
 export function navigateFromBottomTab(navigate: NavigateFunction, tab: BottomTabKey) {
