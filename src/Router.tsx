@@ -1,5 +1,8 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom';
 import App from './App';
+import ActivityDetailPage from './pages/activity/ActivityDetailPage';
+import ActivityPage from './pages/activity/ActivityPage';
+import NewActivityPage from './pages/activity/NewActivityPage';
 import GroupDetailPage from './pages/group/GroupDetailPage';
 import GroupPage from './pages/group/GroupPage';
 import NewGroupPostPage from './pages/group/NewGroupPostPage';
@@ -74,6 +77,18 @@ const router = createBrowserRouter([
           {
             path: 'group/:groupId',
             element: <GroupDetailPage />,
+          },
+          {
+            path: 'activity',
+            element: <ActivityPage />,
+          },
+          {
+            path: 'activity/new',
+            element: <NewActivityPage />,
+          },
+          {
+            path: 'activity/:activityId',
+            element: <ActivityDetailPage />,
           },
         ],
       },
