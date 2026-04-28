@@ -2,6 +2,7 @@ export type GroupCategoryFilter = 'all' | 'study' | 'project' | 'it';
 
 export type GroupItem = {
   id: string;
+  apiId: number;
   badges: string[];
   detailBadges?: string[];
   category: GroupCategoryFilter;
@@ -10,6 +11,8 @@ export type GroupItem = {
   detailDescription?: string;
   authorName: string;
   authorAvatar: string;
+  currentParticipants: number;
+  capacity: number;
   likes: number;
   comments: number;
   timeAgo: string;
@@ -35,6 +38,7 @@ export const groupFilters: Array<{ value: GroupCategoryFilter; label: string }> 
 export const groupItems: GroupItem[] = [
   {
     id: 'gachon-uiux-design-study',
+    apiId: 101,
     badges: ['Study', 'Design'],
     detailBadges: ['Design'],
     category: 'study',
@@ -45,6 +49,8 @@ export const groupItems: GroupItem[] = [
       'Looking for Gachon students interested in UI/UX design. We will study the Stitch tool and Figma together. No experience required, just passion! Meeting every Tuesday at the IT Center.',
     authorName: 'Minjun Kim',
     authorAvatar: '🧑🏻‍🎨',
+    currentParticipants: 4,
+    capacity: 8,
     likes: 24,
     comments: 12,
     timeAgo: '2 mins ago',
@@ -52,6 +58,7 @@ export const groupItems: GroupItem[] = [
   },
   {
     id: 'react-native-side-project',
+    apiId: 102,
     badges: ['Project', 'IT'],
     category: 'project',
     title: 'React Native Side Project 📱',
@@ -61,6 +68,8 @@ export const groupItems: GroupItem[] = [
       'We are building a campus food delivery app and need teammates for frontend, backend, and product planning. Weekly evening sprints, clear role sharing, and demo days every other Friday.',
     authorName: 'Sarah Lee',
     authorAvatar: '👩🏻‍💻',
+    currentParticipants: 3,
+    capacity: 6,
     likes: 8,
     comments: 4,
     timeAgo: '15 mins ago',
@@ -68,6 +77,7 @@ export const groupItems: GroupItem[] = [
   },
   {
     id: 'toeic-morning-study',
+    apiId: 103,
     badges: ['English', 'Study'],
     category: 'study',
     title: 'Toeic 900+ Morning Study ☕',
@@ -77,6 +87,8 @@ export const groupItems: GroupItem[] = [
       'We meet before morning classes to solve LC and RC sets together. Bring your own materials and be ready to share weekly progress. Consistency matters more than prior scores.',
     authorName: 'James Park',
     authorAvatar: '👨🏻',
+    currentParticipants: 5,
+    capacity: 10,
     likes: 2,
     comments: 1,
     timeAgo: '1 hour ago',
@@ -84,6 +96,10 @@ export const groupItems: GroupItem[] = [
     detailVisualVariant: 'portrait',
   },
 ];
+
+export function isGroupFull(group: GroupItem) {
+  return group.currentParticipants >= group.capacity;
+}
 
 export const groupComments: Record<string, GroupComment[]> = {
   'gachon-uiux-design-study': [

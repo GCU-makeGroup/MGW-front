@@ -2,6 +2,7 @@ import clsx from 'clsx';
 import type { ChangeEvent, ReactNode } from 'react';
 import { useId } from 'react';
 import type { GroupComment, GroupItem } from './group-data';
+import { isGroupFull } from './group-data';
 
 function badgeClasses(label: string, tone: 'feed' | 'detail' = 'feed') {
   if (tone === 'detail') {
@@ -263,6 +264,76 @@ export function PeopleIcon() {
   );
 }
 
+function PeoplePlusIcon() {
+  return (
+    <svg aria-hidden='true' viewBox='0 0 24 24' className='h-5 w-5'>
+      <circle cx='9' cy='9' r='2.7' fill='currentColor' opacity='0.92' />
+      <circle cx='16' cy='10' r='2.2' fill='currentColor' opacity='0.68' />
+      <path
+        d='M5.2 18.2c.5-2.1 2.2-3.7 4.5-3.7h.8c2 0 3.7 1.2 4.4 3'
+        fill='none'
+        stroke='currentColor'
+        strokeLinecap='round'
+        strokeWidth='1.7'
+      />
+      <path
+        d='M18.5 15.5v4M16.5 17.5h4'
+        stroke='currentColor'
+        strokeLinecap='round'
+        strokeWidth='1.9'
+      />
+    </svg>
+  );
+}
+
+function CheckCircleIcon() {
+  return (
+    <svg aria-hidden='true' viewBox='0 0 24 24' className='h-16 w-16'>
+      <circle cx='12' cy='12' r='9' fill='none' stroke='currentColor' strokeWidth='2.2' />
+      <path
+        d='m7.8 12.4 2.8 2.8 5.9-6.4'
+        fill='none'
+        stroke='currentColor'
+        strokeLinecap='round'
+        strokeLinejoin='round'
+        strokeWidth='2.6'
+      />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg aria-hidden='true' viewBox='0 0 24 24' className='h-7 w-7'>
+      <path
+        d='m9 5 7 7-7 7'
+        fill='none'
+        stroke='currentColor'
+        strokeLinecap='round'
+        strokeLinejoin='round'
+        strokeWidth='2.4'
+      />
+    </svg>
+  );
+}
+
+function GroupMemberCount({ group, compact = false }: { group: GroupItem; compact?: boolean }) {
+  return (
+    <span
+      className={clsx(
+        'inline-flex items-center gap-1.5 font-semibold',
+        compact ? 'text-[14px] text-[#8a97ab]' : 'text-[15px] text-[#1967d2]',
+      )}
+    >
+      <PeopleIcon />
+      <span>
+        {group.currentParticipants}/{group.capacity}
+        {compact ? '' : ' members'}
+      </span>
+    </span>
+  );
+}
+
 export function HeaderIconButton({
   label,
   children,
@@ -354,6 +425,7 @@ export function GroupFeedCard({ group, onClick }: { group: GroupItem; onClick: (
         </div>
 
         <div className='flex items-center gap-4 text-[14px] font-semibold'>
+          <GroupMemberCount group={group} compact />
           <span className='inline-flex items-center gap-1.5'>
             <span className='text-[#567cf9]'>👍</span>
             {group.likes}
@@ -398,6 +470,9 @@ export function GroupDetailCard({ group }: { group: GroupItem }) {
         <div className='text-[14px]'>
           <p className='font-semibold text-[#2a3854]'>{group.authorName}</p>
           <p className='text-[#9aa7bb]'>{group.timeAgo}</p>
+          <div className='mt-1'>
+            <GroupMemberCount group={group} />
+          </div>
         </div>
       </div>
 
@@ -431,6 +506,94 @@ export function GroupDetailCard({ group }: { group: GroupItem }) {
         </button>
       </div>
     </article>
+  );
+}
+
+export function GroupJoinButton({
+  group,
+  joining,
+  onJoin,
+}: {
+  group: GroupItem;
+  joining: boolean;
+  onJoin: () => void;
+}) {
+  const full = isGroupFull(group);
+
+  return (
+    <button
+      type='button'
+      onClick={onJoin}
+      disabled={joining || full}
+      className={clsx(
+        'inline-flex h-[60px] w-full items-center justify-center gap-3 rounded-[28px] text-[18px] font-bold tracking-[-0.02em] text-white shadow-[0_18px_30px_rgba(25,103,210,0.22)] transition',
+        full
+          ? 'bg-[#b7c1d0] shadow-none'
+          : 'bg-[#0879f2] hover:-translate-y-0.5 disabled:bg-[#94bff0]',
+      )}
+    >
+      <PeoplePlusIcon />
+      {full ? 'Group is Full' : joining ? 'Joining...' : 'Join This Group'}
+    </button>
+  );
+}
+
+export function GroupJoinSuccessView({
+  group,
+  onBackToGroup,
+}: {
+  group: GroupItem;
+  onBackToGroup: () => void;
+}) {
+  return (
+    <div className='flex min-h-dvh flex-col bg-[radial-gradient(circle_at_50%_35%,#ffffff_0%,#f7fbff_34%,#edf5fb_62%,#e9f3f9_100%)] px-6 py-12 text-center'>
+      <div className='flex flex-1 flex-col items-center justify-center'>
+        <div className='rounded-[34px] bg-white p-8 text-[#0d7698] shadow-[0_28px_58px_rgba(13,118,152,0.15)]'>
+          <div className='rounded-full bg-[#e5f1f4] p-5'>
+            <CheckCircleIcon />
+          </div>
+        </div>
+
+        <div className='mt-12 space-y-4'>
+          <h1 className='text-[42px] font-extrabold leading-[1.02] tracking-[-0.06em] text-[#101827]'>
+            Join Successful!
+          </h1>
+          <p className='mx-auto max-w-[340px] text-[19px] leading-[1.55] tracking-[-0.03em] text-[#6f7b8f]'>
+            You have successfully joined the{' '}
+            <strong className='font-extrabold text-[#111827]'>{group.title}</strong> group. Check
+            your Activity tab for updates.
+          </p>
+        </div>
+
+        <div className='mt-10 flex w-full items-center gap-4 rounded-[32px] bg-[#f1f4f7] px-6 py-5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]'>
+          <span className='flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white text-[28px] shadow-[0_10px_24px_rgba(16,34,64,0.08)]'>
+            {group.authorAvatar}
+          </span>
+          <div className='min-w-0 flex-1'>
+            <p className='line-clamp-2 text-[21px] font-extrabold leading-[1.2] tracking-[-0.05em] text-[#111827]'>
+              {group.title}
+            </p>
+            <GroupMemberCount
+              group={{
+                ...group,
+                currentParticipants: Math.min(group.currentParticipants + 1, group.capacity),
+              }}
+            />
+          </div>
+          <span className='text-[#0d7698]'>
+            <ChevronRightIcon />
+          </span>
+        </div>
+      </div>
+
+      <button
+        type='button'
+        onClick={onBackToGroup}
+        className='mb-4 inline-flex h-16 w-full items-center justify-center rounded-full bg-[#0d7698] text-[20px] font-bold text-white shadow-[0_22px_36px_rgba(13,118,152,0.22)]'
+      >
+        Back to Group
+      </button>
+    </div>
   );
 }
 
