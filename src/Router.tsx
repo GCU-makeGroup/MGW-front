@@ -7,6 +7,8 @@ import GroupDetailPage from './pages/group/GroupDetailPage';
 import GroupPage from './pages/group/GroupPage';
 import NewGroupPostPage from './pages/group/NewGroupPostPage';
 import MainPage from './pages/MainPage';
+import MyPagePage from './pages/mypage/MyPagePage';
+import MyPageSettingsPage from './pages/mypage/MyPageSettingsPage';
 import {
   LoginPage,
   NotificationsPage,
@@ -89,6 +91,14 @@ const router = createBrowserRouter([
           {
             path: 'activity/:activityId',
             element: <ActivityDetailPage />,
+          },
+          {
+            path: 'mypage',
+            element: <MyPagePage />,
+          },
+          {
+            path: 'mypage/settings',
+            element: <MyPageSettingsPage />,
           },
         ],
       },

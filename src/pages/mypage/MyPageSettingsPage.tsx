@@ -1,0 +1,432 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  fetchMyPageSettings,
+  logoutFromMyPage,
+  updateAppLanguagePreference,
+  updateDarkModePreference,
+  updateMatchingCommunicationSettings,
+  updateNotificationSettings,
+  type MyPageSettingsViewModel,
+  type PreferredLanguage,
+} from '../../api/mypage';
+import {
+  appLanguageLabels,
+  createMyPageFallbackContext,
+  createInitialSettings,
+  keywordSuggestions,
+} from '../../features/mypage/mypage-data';
+import {
+  AcademicVerificationCard,
+  DangerConfirmationModal,
+  KeywordSelection,
+  PreferredLanguageSelector,
+  SettingsLinkRow,
+  SettingsProfileSummary,
+  SettingsSection,
+  SettingsToggleRow,
+  SignOutFooter,
+} from '../../features/mypage/mypage-ui';
+import { navigateFromBottomTab } from '../../features/navigation/bottom-tab-navigation';
+import { RequireAuth } from '../../features/session/RequireAuth';
+import { useSession } from '../../features/session/session-context';
+import { BellIcon, BottomTabs, ScreenFrame, TopBar } from '../../features/session/ui';
+import { HeaderIconButton, SearchIcon } from '../../features/group/group-ui';
+
+function MyPageSettingsPage() {
+  const navigate = useNavigate();
+  const { state, actions } = useSession();
+  const fallbackContext = createMyPageFallbackContext(state);
+  const { displayName, major, registeredEmail } = fallbackContext;
+  const seedSettings = createInitialSettings(state);
+  const [settings, setSettings] = useState<MyPageSettingsViewModel>(() => seedSettings);
+  const [deactivationEmail, setDeactivationEmail] = useState('');
+  const [showDangerModal, setShowDangerModal] = useState(false);
+  const [infoMessage, setInfoMessage] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const nextSettings = await fetchMyPageSettings(state.accessToken ?? undefined, {
+          displayName,
+          email: registeredEmail,
+          major,
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        setSettings(nextSettings);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [displayName, major, registeredEmail, state.accessToken]);
+
+  const handlePreferredLanguage = async (nextLanguage: PreferredLanguage) => {
+    const previous = settings.matchingCommunication.preferredLanguage;
+    const nextSettings = {
+      ...settings,
+      matchingCommunication: {
+        ...settings.matchingCommunication,
+        preferredLanguage: nextLanguage,
+      },
+    };
+
+    setSettings(nextSettings);
+
+    try {
+      await updateMatchingCommunicationSettings(
+        {
+          interestKeywords: nextSettings.matchingCommunication.interestKeywords,
+          preferredLanguage: nextLanguage,
+        },
+        state.accessToken ?? undefined,
+      );
+    } catch (error) {
+      console.error(error);
+      setSettings((current) => ({
+        ...current,
+        matchingCommunication: {
+          ...current.matchingCommunication,
+          preferredLanguage: previous,
+        },
+      }));
+    }
+  };
+
+  const handleKeywordChange = async (nextKeywords: string[]) => {
+    const previous = settings.matchingCommunication.interestKeywords;
+    setSettings((current) => ({
+      ...current,
+      matchingCommunication: {
+        ...current.matchingCommunication,
+        interestKeywords: nextKeywords,
+      },
+    }));
+
+    try {
+      await updateMatchingCommunicationSettings(
+        {
+          interestKeywords: nextKeywords,
+          preferredLanguage: settings.matchingCommunication.preferredLanguage,
+        },
+        state.accessToken ?? undefined,
+      );
+    } catch (error) {
+      console.error(error);
+      setSettings((current) => ({
+        ...current,
+        matchingCommunication: {
+          ...current.matchingCommunication,
+          interestKeywords: previous,
+        },
+      }));
+    }
+  };
+
+  const handleNotificationToggle = async (
+    key: keyof MyPageSettingsViewModel['notifications'],
+    value: boolean,
+  ) => {
+    const previous = settings.notifications;
+    const nextNotifications = {
+      ...settings.notifications,
+      [key]: value,
+    };
+
+    setSettings((current) => ({
+      ...current,
+      notifications: nextNotifications,
+    }));
+
+    try {
+      await updateNotificationSettings(nextNotifications, state.accessToken ?? undefined);
+    } catch (error) {
+      console.error(error);
+      setSettings((current) => ({
+        ...current,
+        notifications: previous,
+      }));
+    }
+  };
+
+  const handleToggleAppLanguage = async () => {
+    const nextLanguage = settings.languageRegion.appLanguage === 'ENGLISH' ? 'KOREAN' : 'ENGLISH';
+    const previous = settings.languageRegion.appLanguage;
+
+    setSettings((current) => ({
+      ...current,
+      languageRegion: {
+        appLanguage: nextLanguage,
+      },
+    }));
+
+    try {
+      await updateAppLanguagePreference(
+        {
+          appLanguage: nextLanguage,
+        },
+        state.accessToken ?? undefined,
+      );
+    } catch (error) {
+      console.error(error);
+      setSettings((current) => ({
+        ...current,
+        languageRegion: {
+          appLanguage: previous,
+        },
+      }));
+    }
+  };
+
+  const handleToggleDarkMode = async (nextValue: boolean) => {
+    const previous = settings.system.darkMode;
+
+    setSettings((current) => ({
+      ...current,
+      system: {
+        darkMode: nextValue,
+      },
+    }));
+
+    try {
+      await updateDarkModePreference(
+        {
+          darkMode: nextValue,
+        },
+        state.accessToken ?? undefined,
+      );
+    } catch (error) {
+      console.error(error);
+      setSettings((current) => ({
+        ...current,
+        system: {
+          darkMode: previous,
+        },
+      }));
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await logoutFromMyPage(state.accessToken ?? undefined, state.refreshToken);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      actions.resetAll();
+      navigate('/onboard/login', { replace: true });
+    }
+  };
+
+  return (
+    <RequireAuth>
+      <ScreenFrame className='pb-4 pt-4'>
+        <div className='flex flex-1 flex-col'>
+          <TopBar
+            title='Settings'
+            onBack={() => navigate(-1)}
+            rightContent={
+              <>
+                <HeaderIconButton label='Search'>
+                  <SearchIcon />
+                </HeaderIconButton>
+                <HeaderIconButton label='Notifications' showBadge>
+                  <BellIcon />
+                </HeaderIconButton>
+              </>
+            }
+          />
+
+          <main className='flex-1 space-y-6 pb-6'>
+            {infoMessage ? (
+              <p className='rounded-2xl bg-[#eef4ff] px-4 py-3 text-[13px] font-medium text-[#375b97]'>
+                {infoMessage}
+              </p>
+            ) : null}
+            <SettingsProfileSummary settings={settings} />
+
+            <SettingsSection title='Matching & Communication'>
+              <div className='space-y-5'>
+                <KeywordSelection
+                  keywords={settings.matchingCommunication.interestKeywords}
+                  onRemove={(keyword) =>
+                    handleKeywordChange(
+                      settings.matchingCommunication.interestKeywords.filter(
+                        (currentKeyword) => currentKeyword !== keyword,
+                      ),
+                    )
+                  }
+                  onAddSuggestion={() => {
+                    const nextKeyword = keywordSuggestions.find(
+                      (keyword) =>
+                        !settings.matchingCommunication.interestKeywords.includes(keyword),
+                    );
+
+                    if (!nextKeyword) {
+                      return;
+                    }
+
+                    void handleKeywordChange([
+                      ...settings.matchingCommunication.interestKeywords,
+                      nextKeyword,
+                    ]);
+                  }}
+                />
+                <PreferredLanguageSelector
+                  value={settings.matchingCommunication.preferredLanguage}
+                  onSelect={(value) => {
+                    void handlePreferredLanguage(value);
+                  }}
+                />
+              </div>
+            </SettingsSection>
+
+            <SettingsSection title='Notifications'>
+              <div className='space-y-1'>
+                <SettingsToggleRow
+                  icon='💬'
+                  title='New Messages'
+                  description='Real-time alerts for private chats'
+                  enabled={settings.notifications.newMessages}
+                  onToggle={(value) => {
+                    void handleNotificationToggle('newMessages', value);
+                  }}
+                />
+                <SettingsToggleRow
+                  icon='👥'
+                  title='Group Invites'
+                  description='Notification when joined to a crew'
+                  enabled={settings.notifications.groupInvites}
+                  onToggle={(value) => {
+                    void handleNotificationToggle('groupInvites', value);
+                  }}
+                />
+                <SettingsToggleRow
+                  icon='📝'
+                  title='Post Comments'
+                  description='When someone replies to your board posts'
+                  enabled={settings.notifications.postComments}
+                  onToggle={(value) => {
+                    void handleNotificationToggle('postComments', value);
+                  }}
+                />
+                <SettingsToggleRow
+                  icon='🌙'
+                  title='Etiquette Mode'
+                  description={`Do Not Disturb ${settings.notifications.etiquetteStartTime} - ${settings.notifications.etiquetteEndTime}`}
+                  enabled={settings.notifications.etiquetteMode}
+                  onToggle={(value) => {
+                    void handleNotificationToggle('etiquetteMode', value);
+                  }}
+                />
+              </div>
+            </SettingsSection>
+
+            <SettingsSection title='Language & Region'>
+              <SettingsLinkRow
+                icon='🌐'
+                title='App Language'
+                value={appLanguageLabels[settings.languageRegion.appLanguage]}
+                onClick={() => {
+                  void handleToggleAppLanguage();
+                }}
+              />
+            </SettingsSection>
+
+            <SettingsSection title='Account & Security'>
+              <div className='space-y-2'>
+                <AcademicVerificationCard
+                  studentId={settings.accountSecurity.studentId}
+                  department={settings.accountSecurity.department}
+                  onReverify={() => {
+                    setInfoMessage(
+                      '학적 재인증 API는 문서 확정 후 연결할 수 있도록 자리만 준비했다.',
+                    );
+                  }}
+                />
+                <SettingsLinkRow icon='🔐' title='Change Password' />
+                <SettingsToggleRow
+                  icon='🛡️'
+                  title='Two-Factor Authentication'
+                  description='Extra security via student email'
+                  enabled={settings.accountSecurity.twoFactorEnabled}
+                  onToggle={(value) => {
+                    setSettings((current) => ({
+                      ...current,
+                      accountSecurity: {
+                        ...current.accountSecurity,
+                        twoFactorEnabled: value,
+                      },
+                    }));
+                    setInfoMessage(
+                      '2차 인증 API는 문서 확정 전이라 현재는 프론트 상태만 반영한다.',
+                    );
+                  }}
+                />
+              </div>
+            </SettingsSection>
+
+            <SettingsSection title='System'>
+              <SettingsToggleRow
+                icon='🌘'
+                title='Dark Mode'
+                enabled={settings.system.darkMode}
+                onToggle={(value) => {
+                  void handleToggleDarkMode(value);
+                }}
+              />
+            </SettingsSection>
+
+            <div className='pt-2 text-center'>
+              <button
+                type='button'
+                onClick={() => {
+                  setInfoMessage('');
+                  setShowDangerModal(true);
+                }}
+                className='text-[16px] font-semibold text-[#203354]'
+              >
+                Sign Out
+              </button>
+            </div>
+            <SignOutFooter />
+          </main>
+
+          <footer>
+            <BottomTabs
+              active='mypage'
+              onNavigate={(tab) => navigateFromBottomTab(navigate, tab)}
+            />
+          </footer>
+        </div>
+
+        {showDangerModal ? (
+          <DangerConfirmationModal
+            email={registeredEmail}
+            value={deactivationEmail}
+            onChange={setDeactivationEmail}
+            onCancel={() => {
+              setDeactivationEmail('');
+              setShowDangerModal(false);
+            }}
+            onConfirm={() => {
+              void handleSignOut();
+            }}
+          />
+        ) : null}
+      </ScreenFrame>
+    </RequireAuth>
+  );
+}
+
+export default MyPageSettingsPage;
