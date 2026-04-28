@@ -24,9 +24,11 @@ function NewGroupPostPage() {
   const [description, setDescription] = useState('');
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [coverImagePreviewUrl, setCoverImagePreviewUrl] = useState<string | null>(null);
+  const parsedCapacity = Number.parseInt(recruitmentNumber, 10);
   const canSubmit =
     title.trim().length > 0 &&
-    recruitmentNumber.trim().length > 0 &&
+    Number.isFinite(parsedCapacity) &&
+    parsedCapacity > 0 &&
     activityStartDate.trim().length > 0 &&
     activityEndDate.trim().length > 0 &&
     description.trim().length > 0;
@@ -61,11 +63,13 @@ function NewGroupPostPage() {
     const draftPayload = {
       title: title.trim(),
       category,
-      recruitmentNumber: recruitmentNumber.trim(),
-      activityStartDate,
-      activityEndDate,
+      capacity: parsedCapacity,
+      schedule: activityStartDate,
       description: description.trim(),
-      coverImageFile,
+      thumbnail: coverImageFile,
+      metadata: {
+        activityEndDate,
+      },
     };
 
     console.info('Ready group post draft', draftPayload);
