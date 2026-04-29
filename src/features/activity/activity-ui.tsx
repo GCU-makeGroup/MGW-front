@@ -1,6 +1,13 @@
 import clsx from 'clsx';
 import type { ReactNode } from 'react';
-import type { ActivityGroupOption, ActivityItem, JoinMode } from './activity-data';
+import type {
+  ActivityGroupOption,
+  ActivityItem,
+  JoinMode,
+  MyActivityItem,
+  MyActivityStatus,
+  MyActivityTab,
+} from './activity-data';
 
 function ActivityVisual({
   variant,
@@ -196,6 +203,158 @@ export function ActivityFilterChip({
   );
 }
 
+function PersonIcon() {
+  return (
+    <svg aria-hidden='true' viewBox='0 0 24 24' className='h-5 w-5'>
+      <circle cx='12' cy='8' r='3.3' fill='currentColor' />
+      <path d='M6.5 19c.5-3.2 2.6-5.2 5.5-5.2s5 2 5.5 5.2' fill='currentColor' opacity='0.9' />
+    </svg>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg aria-hidden='true' viewBox='0 0 24 24' className='h-5 w-5'>
+      <path
+        d='m5 16.8-.7 3 3-.7L17.8 9.6l-2.3-2.3L5 16.8Z'
+        fill='none'
+        stroke='currentColor'
+        strokeLinejoin='round'
+        strokeWidth='1.9'
+      />
+      <path
+        d='m14.8 8 1.8-1.8a1.6 1.6 0 0 1 2.3 0l.9.9a1.6 1.6 0 0 1 0 2.3L18 11.2'
+        fill='none'
+        stroke='currentColor'
+        strokeLinecap='round'
+        strokeWidth='1.9'
+      />
+    </svg>
+  );
+}
+
+function PeopleMiniIcon() {
+  return (
+    <svg aria-hidden='true' viewBox='0 0 24 24' className='h-4.5 w-4.5'>
+      <circle cx='9' cy='9' r='2.6' fill='currentColor' opacity='0.9' />
+      <circle cx='16' cy='10' r='2.2' fill='currentColor' opacity='0.55' />
+      <path
+        d='M5.5 18c.4-2.1 2.1-3.5 4.3-3.5h.5c2 0 3.6 1.3 4.2 3.2'
+        fill='none'
+        stroke='currentColor'
+        strokeLinecap='round'
+        strokeWidth='1.7'
+      />
+    </svg>
+  );
+}
+
+function statusLabel(status: MyActivityStatus) {
+  return status.toUpperCase();
+}
+
+export function MyActivityButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type='button'
+      onClick={onClick}
+      className='inline-flex h-12 items-center gap-3 rounded-[16px] bg-[#e7eefc] px-5 text-[16px] font-extrabold tracking-[-0.03em] text-[#071d43] shadow-[inset_0_0_0_1px_rgba(13,63,124,0.08)]'
+    >
+      <PersonIcon />
+      My Activity
+    </button>
+  );
+}
+
+export function MyActivitySegmentedTabs({
+  active,
+  onChange,
+}: {
+  active: MyActivityTab;
+  onChange: (_tab: MyActivityTab) => void;
+}) {
+  return (
+    <div className='grid grid-cols-2 rounded-[30px] bg-[#eef1f5] p-1 shadow-[0_12px_28px_rgba(16,34,64,0.05)]'>
+      {(['joined', 'created'] as const).map((tab) => (
+        <button
+          key={tab}
+          type='button'
+          onClick={() => onChange(tab)}
+          className={clsx(
+            'h-14 rounded-[26px] text-[20px] font-extrabold tracking-[-0.04em] transition',
+            active === tab
+              ? 'bg-white text-[#071d43] shadow-[0_10px_24px_rgba(16,34,64,0.08)]'
+              : 'text-[#6f7b8f]',
+          )}
+        >
+          {tab === 'joined' ? 'Joined' : 'Created'}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function MyActivityListCard({
+  item,
+  mode,
+  onOpen,
+  onAction,
+}: {
+  item: MyActivityItem;
+  mode: MyActivityTab;
+  onOpen: () => void;
+  onAction: () => void;
+}) {
+  return (
+    <article className='relative overflow-hidden rounded-[30px] bg-white shadow-[0_18px_38px_rgba(16,34,64,0.06)]'>
+      <div className='absolute inset-y-0 left-0 w-2 rounded-l-[30px] bg-[#0b2d5f]' />
+      <button
+        type='button'
+        onClick={onOpen}
+        className='flex w-full items-center gap-4 px-5 py-5 text-left'
+      >
+        <span className='flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-[#e8f0ff] text-[32px] font-extrabold text-[#0a2f60]'>
+          {item.icon}
+        </span>
+        <span className='min-w-0 flex-1'>
+          <span className='line-clamp-2 text-[20px] font-extrabold leading-[1.16] tracking-[-0.05em] text-[#071d43]'>
+            {item.title}
+          </span>
+          <span className='mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px] font-extrabold uppercase tracking-[0.04em] text-[#5e6979]'>
+            <span className='inline-flex items-center gap-1.5'>
+              <PeopleMiniIcon />
+              {item.memberLabel}
+            </span>
+            <span className='text-[#071d43]'>{statusLabel(item.status)}</span>
+          </span>
+        </span>
+      </button>
+      <button
+        type='button'
+        onClick={onAction}
+        className={clsx(
+          'absolute right-5 top-1/2 flex h-14 w-14 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-[0_12px_26px_rgba(16,34,64,0.12)]',
+          mode === 'joined' ? 'text-[#ff4a3f]' : 'text-[#071d43]',
+        )}
+        aria-label={mode === 'joined' ? 'Toggle saved activity' : 'Edit activity'}
+      >
+        {mode === 'joined' ? (
+          <svg aria-hidden='true' viewBox='0 0 24 24' className='h-7 w-7'>
+            <path
+              d='M12 20s-7-4.6-7-10.2C5 6.7 6.7 5 8.7 5c1.4 0 2.6.8 3.3 2 .7-1.2 1.9-2 3.3-2 2 0 3.7 1.7 3.7 4.8C19 15.4 12 20 12 20Z'
+              fill={item.liked ? 'currentColor' : 'none'}
+              stroke='currentColor'
+              strokeWidth='1.8'
+            />
+          </svg>
+        ) : (
+          <PencilIcon />
+        )}
+      </button>
+    </article>
+  );
+}
+
 export function ActivityFeedCard({
   activity,
   onOpen,
@@ -372,6 +531,141 @@ export function ActivityDetailCard({
             className='inline-flex h-14 flex-1 items-center justify-center rounded-full bg-[#0d3f7c] px-6 text-[18px] font-bold text-white shadow-[0_18px_30px_rgba(13,63,124,0.24)]'
           >
             Join This Group
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+export function ManagedActivityDetailCard({
+  activity,
+  onClose,
+  onShare,
+  onOpenChat,
+}: {
+  activity: ActivityItem;
+  onClose: () => void;
+  onShare: () => void;
+  onOpenChat: () => void;
+}) {
+  return (
+    <article className='overflow-hidden rounded-[34px] bg-white shadow-[0_24px_48px_rgba(16,34,64,0.16)]'>
+      <div className='relative'>
+        <ActivityVisual
+          variant={activity.imageVariant}
+          heightClassName='h-[300px] w-full rounded-b-none rounded-t-[34px]'
+          showFooterLabel={false}
+        />
+        <button
+          type='button'
+          onClick={onClose}
+          className='absolute right-5 top-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#6f6558]/80 text-white backdrop-blur-sm'
+          aria-label='Close activity detail'
+        >
+          <svg aria-hidden='true' viewBox='0 0 24 24' className='h-8 w-8'>
+            <path
+              d='M7 7l10 10M17 7 7 17'
+              stroke='currentColor'
+              strokeLinecap='round'
+              strokeWidth='2.4'
+            />
+          </svg>
+        </button>
+        <div className='absolute bottom-6 left-6 flex flex-wrap gap-3'>
+          <span className='rounded-full bg-[#a50707] px-5 py-3 text-[15px] font-extrabold uppercase tracking-[0.14em] text-white'>
+            Hot Trending
+          </span>
+          <span className='rounded-full bg-white/24 px-5 py-3 text-[15px] font-extrabold uppercase tracking-[0.14em] text-white backdrop-blur-sm'>
+            {activity.categoryLabel}
+          </span>
+        </div>
+      </div>
+
+      <div className='space-y-7 px-7 py-7'>
+        <div className='space-y-4'>
+          <h1 className='text-[40px] font-extrabold leading-[0.98] tracking-[-0.06em] text-[#071d43]'>
+            {activity.title}
+          </h1>
+          <div className='flex items-center gap-4 text-[18px] text-[#5c6778]'>
+            <div className='flex -space-x-2'>
+              {['👩🏽', '👩🏾', '👨🏻‍💻'].map((avatar) => (
+                <span
+                  key={avatar}
+                  className='flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-[#e8eef9] text-[17px]'
+                >
+                  {avatar}
+                </span>
+              ))}
+              <span className='flex h-9 min-w-9 items-center justify-center rounded-full border-2 border-white bg-[#0d3f7c] px-2 text-[13px] font-bold text-white'>
+                +21
+              </span>
+            </div>
+            <span>{activity.maxMembers} Members Active</span>
+          </div>
+        </div>
+
+        <div className='space-y-4'>
+          <div className='flex items-center gap-5 rounded-[28px] bg-[#f1f3f6] px-6 py-5'>
+            <span className='flex h-14 w-14 items-center justify-center rounded-full bg-[#dce8ff] text-[24px] text-[#071d43]'>
+              📅
+            </span>
+            <div>
+              <p className='text-[12px] font-extrabold uppercase tracking-[0.18em] text-[#7f8898]'>
+                Schedule
+              </p>
+              <p className='mt-1 text-[24px] font-bold tracking-[-0.05em] text-[#111827]'>
+                {activity.schedule}
+              </p>
+            </div>
+          </div>
+          <div className='flex items-center gap-5 rounded-[28px] bg-[#f1f3f6] px-6 py-5'>
+            <span className='flex h-14 w-14 items-center justify-center rounded-full bg-[#dce8ff] text-[24px] text-[#071d43]'>
+              📍
+            </span>
+            <div>
+              <p className='text-[12px] font-extrabold uppercase tracking-[0.18em] text-[#7f8898]'>
+                Location
+              </p>
+              <p className='mt-1 text-[24px] font-bold tracking-[-0.05em] text-[#111827]'>
+                {activity.location}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className='space-y-3'>
+          <h2 className='text-[28px] font-extrabold tracking-[-0.05em] text-[#071d43]'>
+            About this Session
+          </h2>
+          <p className='text-[18px] leading-[1.55] text-[#5e6979]'>{activity.description}</p>
+        </div>
+
+        <div className='flex items-center gap-4'>
+          <button
+            type='button'
+            onClick={onShare}
+            className='flex h-16 w-16 items-center justify-center rounded-full border border-[#d5dce8] text-[#6b7280]'
+            aria-label='Share activity'
+          >
+            <svg aria-hidden='true' viewBox='0 0 24 24' className='h-6 w-6'>
+              <path
+                d='M15 8.5a2.5 2.5 0 1 0-2.35-3.35L8.6 7.26a2.5 2.5 0 1 0 0 4.48l4.05 2.11A2.5 2.5 0 1 0 15 15.5'
+                fill='none'
+                stroke='currentColor'
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                strokeWidth='1.8'
+              />
+            </svg>
+          </button>
+          <button
+            type='button'
+            onClick={onOpenChat}
+            className='inline-flex h-16 flex-1 items-center justify-center gap-3 rounded-full bg-[#ffe100] px-6 text-[21px] font-extrabold tracking-[-0.04em] text-[#3a241f] shadow-[0_18px_34px_rgba(255,225,0,0.22)]'
+          >
+            <span aria-hidden='true'>▰</span>
+            Join KakaoTalk Group
           </button>
         </div>
       </div>

@@ -10,6 +10,7 @@ import {
   ActivityFeedCard,
   ActivityFilterChip,
   ActivityHotCard,
+  MyActivityButton,
 } from '../../features/activity/activity-ui';
 import { navigateFromBottomTab } from '../../features/navigation/bottom-tab-navigation';
 import { RequireAuth } from '../../features/session/RequireAuth';
@@ -68,6 +69,10 @@ function ActivityPage() {
 
           <main className='relative flex-1 pt-8'>
             <div className='space-y-8 pb-28'>
+              <div className='flex justify-end'>
+                <MyActivityButton onClick={() => navigate('/activity/my')} />
+              </div>
+
               <section className='space-y-4'>
                 <div className='flex items-center justify-between'>
                   <h2 className='text-[28px] font-extrabold tracking-[-0.05em] text-[#203354]'>

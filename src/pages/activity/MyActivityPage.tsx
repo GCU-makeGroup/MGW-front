@@ -1,0 +1,103 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { myActivityItems, type MyActivityTab } from '../../features/activity/activity-data';
+import { MyActivityListCard, MyActivitySegmentedTabs } from '../../features/activity/activity-ui';
+import { FloatingActionButton, HeaderIconButton, SearchIcon } from '../../features/group/group-ui';
+import { navigateFromBottomTab } from '../../features/navigation/bottom-tab-navigation';
+import { RequireAuth } from '../../features/session/RequireAuth';
+import { BackButton, BellIcon, BottomTabs, ScreenFrame } from '../../features/session/ui';
+
+function MyActivityPage() {
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<MyActivityTab>('joined');
+  const [likedState, setLikedState] = useState<Record<string, boolean>>(
+    Object.fromEntries(myActivityItems.map((item) => [item.title, Boolean(item.liked)])),
+  );
+
+  const visibleItems = myActivityItems.filter((item) => item.tab === activeTab);
+  const createButtonToneClassName = activeTab === 'created' ? 'bg-[#7d0904]' : 'bg-[#071d43]';
+
+  return (
+    <RequireAuth>
+      <ScreenFrame className='pb-4 pt-4'>
+        <div className='flex flex-1 flex-col'>
+          <header className='grid grid-cols-[44px_1fr_auto] items-center gap-3 text-[#071d43]'>
+            <BackButton onClick={() => navigate('/activity')} />
+            <h1 className='text-center text-[22px] font-extrabold tracking-[-0.05em]'>
+              GachonConnect
+            </h1>
+            <div className='flex items-center gap-2'>
+              <HeaderIconButton label='Search'>
+                <SearchIcon />
+              </HeaderIconButton>
+              <HeaderIconButton label='Notifications'>
+                <BellIcon />
+              </HeaderIconButton>
+              <span className='flex h-10 w-10 items-center justify-center rounded-full bg-white text-[22px] shadow-[0_8px_20px_rgba(16,34,64,0.08)]'>
+                👨🏻
+              </span>
+            </div>
+          </header>
+
+          <main className='relative flex-1 overflow-y-auto pb-28 pt-14'>
+            <div className='space-y-10'>
+              <section className='space-y-5'>
+                <h2 className='text-[56px] font-extrabold leading-[0.98] tracking-[-0.07em] text-[#071d43]'>
+                  Discovery
+                </h2>
+                <p className='max-w-[320px] text-[28px] leading-[1.45] tracking-[-0.05em] text-[#2f3b4e]'>
+                  Review and manage your academic & social gatherings
+                </p>
+              </section>
+
+              <section className='space-y-5'>
+                <h2 className='text-[34px] font-extrabold tracking-[-0.06em] text-[#111827]'>
+                  My Activities
+                </h2>
+                <MyActivitySegmentedTabs active={activeTab} onChange={setActiveTab} />
+              </section>
+
+              <section className='space-y-4'>
+                {visibleItems.map((item) => (
+                  <MyActivityListCard
+                    key={`${item.tab}-${item.title}`}
+                    item={{ ...item, liked: likedState[item.title] }}
+                    mode={activeTab}
+                    onOpen={() => navigate(`/activity/my/${item.id}`)}
+                    onAction={() => {
+                      if (activeTab === 'joined') {
+                        setLikedState((prev) => ({
+                          ...prev,
+                          [item.title]: !prev[item.title],
+                        }));
+                        return;
+                      }
+
+                      navigate('/activity/new');
+                    }}
+                  />
+                ))}
+              </section>
+            </div>
+
+            <FloatingActionButton
+              ariaLabel='Create activity'
+              onClick={() => navigate('/activity/new')}
+              className={`fixed bottom-[116px] right-[calc(50%_-_190px)] z-20 ${createButtonToneClassName}`}
+              variant='circle'
+            />
+          </main>
+
+          <footer>
+            <BottomTabs
+              active='activity'
+              onNavigate={(tab) => navigateFromBottomTab(navigate, tab)}
+            />
+          </footer>
+        </div>
+      </ScreenFrame>
+    </RequireAuth>
+  );
+}
+
+export default MyActivityPage;
