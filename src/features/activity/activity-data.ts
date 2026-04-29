@@ -8,6 +8,8 @@ export type ActivityCategory =
   | 'sports';
 
 export type JoinMode = 'individual' | 'group';
+export type MyActivityTab = 'joined' | 'created';
+export type MyActivityStatus = 'active' | 'completed' | 'upcoming';
 
 export type ActivityGroupOption = {
   id: string;
@@ -35,7 +37,18 @@ export type ActivityItem = {
   isHotPick?: boolean;
   liked: boolean;
   joinState: 'available' | 'joined' | 'full';
+  kakaoOpenChatLink?: string;
   groupOptions?: ActivityGroupOption[];
+};
+
+export type MyActivityItem = {
+  id: string;
+  tab: MyActivityTab;
+  title: string;
+  memberLabel: string;
+  status: MyActivityStatus;
+  icon: string;
+  liked?: boolean;
 };
 
 export const activityFilters: Array<{ value: ActivityCategory | 'all'; label: string }> = [
@@ -124,6 +137,7 @@ export const activityItems: ActivityItem[] = [
     imageVariant: 'studio',
     liked: false,
     joinState: 'available',
+    kakaoOpenChatLink: 'https://open.kakao.com/o/gachon-dev-studio',
     groupOptions: [
       {
         id: 'neural-networks-team',
@@ -170,4 +184,86 @@ export const activityItems: ActivityItem[] = [
 
 export function getActivityById(activityId: string) {
   return activityItems.find((activity) => activity.id === activityId) ?? activityItems[0];
+}
+
+export const myActivityItems: MyActivityItem[] = [
+  {
+    id: 'gachon-dev-studio-weekly-sprint',
+    tab: 'joined',
+    title: 'Advanced Algorithms Study Group',
+    memberLabel: '6/8 MEMBERS',
+    status: 'active',
+    icon: '▱',
+    liked: true,
+  },
+  {
+    id: 'midnight-run-club',
+    tab: 'joined',
+    title: 'Weekly Futsal Match',
+    memberLabel: '14 MEMBERS',
+    status: 'completed',
+    icon: '◉',
+    liked: false,
+  },
+  {
+    id: 'global-ai-ethics-summit',
+    tab: 'joined',
+    title: 'UI/UX Design Masterclass',
+    memberLabel: '22 MEMBERS',
+    status: 'upcoming',
+    icon: '●',
+    liked: false,
+  },
+  {
+    id: 'gachon-dev-studio-weekly-sprint',
+    tab: 'created',
+    title: 'Web Development Study Jam',
+    memberLabel: '8 MEMBERS',
+    status: 'active',
+    icon: '□',
+  },
+  {
+    id: 'global-ai-ethics-summit',
+    tab: 'created',
+    title: 'Career Growth Workshop',
+    memberLabel: '24 MEMBERS',
+    status: 'active',
+    icon: '✦',
+  },
+  {
+    id: 'midnight-run-club',
+    tab: 'created',
+    title: 'Autumn Campus Walk',
+    memberLabel: '6 MEMBERS',
+    status: 'completed',
+    icon: '⚑',
+  },
+  {
+    id: 'gachon-founders-weekend',
+    tab: 'created',
+    title: 'Public Speaking Club',
+    memberLabel: '16 MEMBERS',
+    status: 'upcoming',
+    icon: '▮',
+  },
+  {
+    id: 'gachon-dev-studio-weekly-sprint',
+    tab: 'created',
+    title: 'Book Club : Think & Share',
+    memberLabel: '12 MEMBERS',
+    status: 'active',
+    icon: '▣',
+  },
+  {
+    id: 'global-ai-ethics-summit',
+    tab: 'created',
+    title: 'Coffee Chat Networking',
+    memberLabel: '10 MEMBERS',
+    status: 'upcoming',
+    icon: '☕',
+  },
+];
+
+export function getMyActivityById(activityId: string) {
+  return myActivityItems.find((activity) => activity.id === activityId) ?? myActivityItems[0];
 }

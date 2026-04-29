@@ -2,6 +2,8 @@ import { Navigate, createBrowserRouter } from 'react-router-dom';
 import App from './App';
 import ActivityDetailPage from './pages/activity/ActivityDetailPage';
 import ActivityPage from './pages/activity/ActivityPage';
+import MyActivityDetailPage from './pages/activity/MyActivityDetailPage';
+import MyActivityPage from './pages/activity/MyActivityPage';
 import NewActivityPage from './pages/activity/NewActivityPage';
 import GroupDetailPage from './pages/group/GroupDetailPage';
 import GroupPage from './pages/group/GroupPage';
@@ -83,6 +85,14 @@ const router = createBrowserRouter([
           {
             path: 'activity',
             element: <ActivityPage />,
+          },
+          {
+            path: 'activity/my',
+            element: <MyActivityPage />,
+          },
+          {
+            path: 'activity/my/:activityId',
+            element: <MyActivityDetailPage />,
           },
           {
             path: 'activity/new',
