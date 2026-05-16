@@ -1,23 +1,35 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '');
+import { request } from './client';
 
-const ENDPOINTS = {
-  overview: '/mypage',
-  schedule: '/mypage/schedule',
-  profile: '/mypage/profile',
-  logout: '/auth/logout',
-  settings: '/mypage/settings',
-  matchingCommunication: '/mypage/settings/matching-communication',
-  notifications: '/mypage/settings/notifications',
-  appLanguage: '/mypage/settings/app-language',
-  darkMode: '/mypage/settings/dark-mode',
-} as const;
+// ---------------------------------------------------------------------------
+// Backend DTO types (responses from actual endpoints)
+// ---------------------------------------------------------------------------
 
-type MyPageApiEnvelope<TResult> = {
-  isSuccess: boolean;
-  code: string;
-  message: string;
-  result: TResult;
+/** Shape returned by GET /mypage?year=X&month=Y */
+type MyPageMainResponse = {
+  profile: {
+    name: string;
+    imageUrl: string | null;
+    introduction: string;
+  };
+  summary: {
+    activityCount: number;
+    groupCount: number;
+    point: number;
+  };
+  calendar: {
+    year: number;
+    month: number;
+    selectedDate: number;
+    schedules: Array<{ date: string; hasSchedule: boolean }>;
+  };
 };
+
+/** Shape returned by GET /schedules?year=X&month=Y */
+type ScheduleResponse = Array<{ date: string; hasSchedule: boolean }>;
+
+// ---------------------------------------------------------------------------
+// Internal DTO types used by mock fallbacks (endpoints that don't exist yet)
+// ---------------------------------------------------------------------------
 
 type MyPageFallbackContext = {
   displayName?: string;
@@ -85,25 +97,9 @@ type MyPageSettingsDto = {
   system: SystemSettingsDto;
 };
 
-type AcademicScheduleDto = {
-  year: number;
-  month: number;
-  selectedDay: number;
-  events: Array<{
-    id: string;
-    typeLabel: string;
-    title: string;
-    timeRange: string;
-    location: string;
-    joiningFriendsLabel: string;
-    completed: boolean;
-  }>;
-  trendingEvent: {
-    badgeLabel: string;
-    title: string;
-    location: string;
-  };
-};
+// ---------------------------------------------------------------------------
+// Exported view-model types (unchanged public API)
+// ---------------------------------------------------------------------------
 
 export type PreferredLanguage = 'KOREAN' | 'ENGLISH' | 'NONE';
 export type AppLanguage = 'KOREAN' | 'ENGLISH';
@@ -191,11 +187,9 @@ export type UpdateDarkModeRequest = {
   darkMode: boolean;
 };
 
-function pause(ms: number) {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-}
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function monthLabel(year: number, month: number) {
   return new Intl.DateTimeFormat('en-US', {
@@ -243,44 +237,6 @@ function buildCalendarDays(year: number, month: number, selectedDay: number, eve
   return days;
 }
 
-function parseResponse<TResult>(text: string): MyPageApiEnvelope<TResult> {
-  if (!text) {
-    throw new Error('서버 응답이 비어 있습니다.');
-  }
-
-  return JSON.parse(text) as MyPageApiEnvelope<TResult>;
-}
-
-async function request<TResult>(
-  endpoint: string,
-  init: globalThis.RequestInit,
-  fallback: () => MyPageApiEnvelope<TResult>,
-) {
-  if (!API_BASE_URL) {
-    await pause(220);
-    return fallback();
-  }
-
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, init);
-
-  if (!response.ok) {
-    let message = `요청에 실패했습니다. (${response.status})`;
-
-    try {
-      const payload = (await response.json()) as { message?: string };
-      if (typeof payload.message === 'string') {
-        message = payload.message;
-      }
-    } catch {
-      // Keep the default error message.
-    }
-
-    throw new Error(message);
-  }
-
-  return parseResponse<TResult>(await response.text());
-}
-
 function buildIdentity(context?: MyPageFallbackContext) {
   const displayName = context?.displayName?.trim() || 'Kim Min-jun';
   const email = context?.email?.trim() || 'student@gachon.ac.kr';
@@ -288,6 +244,10 @@ function buildIdentity(context?: MyPageFallbackContext) {
 
   return { displayName, email, major };
 }
+
+// ---------------------------------------------------------------------------
+// View-model mappers
+// ---------------------------------------------------------------------------
 
 function mapOverview(
   dto: MyPageOverviewDto,
@@ -310,6 +270,28 @@ function mapOverview(
   };
 }
 
+function mapOverviewFromBackend(
+  data: MyPageMainResponse,
+  context?: MyPageFallbackContext,
+): MyPageOverviewViewModel {
+  const identity = buildIdentity(context);
+  const { profile, summary } = data;
+
+  return {
+    memberId: 0,
+    name: profile.name || identity.displayName,
+    major: identity.major,
+    verificationLabel: 'Academic Verified',
+    emailVerified: true,
+    profileEmoji: '👨🏻‍💼',
+    stats: {
+      posts: summary.activityCount,
+      groups: summary.groupCount,
+      points: summary.point,
+    },
+  };
+}
+
 function mapSettings(dto: MyPageSettingsDto): MyPageSettingsViewModel {
   return {
     profile: {
@@ -327,346 +309,180 @@ function mapSettings(dto: MyPageSettingsDto): MyPageSettingsViewModel {
   };
 }
 
-function mapSchedule(dto: AcademicScheduleDto): AcademicScheduleViewModel {
-  const eventDays = [dto.selectedDay];
-  const selectedDateIso = `${dto.year}-${String(dto.month).padStart(2, '0')}-${String(dto.selectedDay).padStart(2, '0')}`;
+// ---------------------------------------------------------------------------
+// Fallback data (mock)
+// ---------------------------------------------------------------------------
 
-  return {
-    monthLabel: monthLabel(dto.year, dto.month),
-    selectedDayLabel: selectedDayLabel(dto.year, dto.month, dto.selectedDay),
-    selectedDateIso,
-    days: buildCalendarDays(dto.year, dto.month, dto.selectedDay, eventDays),
-    events: dto.events,
-    trendingEvent: dto.trendingEvent,
-  };
-}
-
-function fallbackOverview(context?: MyPageFallbackContext): MyPageApiEnvelope<MyPageOverviewDto> {
+function fallbackOverviewDto(context?: MyPageFallbackContext): MyPageOverviewDto {
   const identity = buildIdentity(context);
 
   return {
-    isSuccess: true,
-    code: 'COMMON200',
-    message: '성공입니다.',
-    result: {
-      memberId: 1,
-      name: identity.displayName,
+    memberId: 1,
+    name: identity.displayName,
+    profileImageUrl: null,
+    emailVerified: true,
+    verifiedBadgeLabel: 'Academic Verified',
+    stats: {
+      postCount: 24,
+      groupCount: 8,
+      point: 1250,
+    },
+  };
+}
+
+function fallbackSettingsDto(context?: MyPageFallbackContext): MyPageSettingsDto {
+  const identity = buildIdentity(context);
+
+  return {
+    profile: {
+      name: identity.displayName === 'Kim Min-jun' ? 'Alex Kim' : identity.displayName,
+      major: identity.major,
+      grade: 'Senior',
+      academicVerified: true,
       profileImageUrl: null,
-      emailVerified: true,
-      verifiedBadgeLabel: 'Academic Verified',
-      stats: {
-        postCount: 24,
-        groupCount: 8,
-        point: 1250,
-      },
+    },
+    matchingCommunication: {
+      interestKeywords: ['Back-end', 'Guitar', 'K-Pop'],
+      preferredLanguage: 'KOREAN',
+    },
+    notifications: {
+      newMessages: true,
+      groupInvites: true,
+      postComments: false,
+      etiquetteMode: true,
+      etiquetteStartTime: '23:00',
+      etiquetteEndTime: '07:00',
+    },
+    languageRegion: {
+      appLanguage: 'ENGLISH',
+    },
+    accountSecurity: {
+      studentId: '2021034920',
+      department: 'Dept Of College of AI & Software',
+      twoFactorEnabled: false,
+    },
+    system: {
+      darkMode: false,
     },
   };
 }
 
-function fallbackSchedule(): MyPageApiEnvelope<AcademicScheduleDto> {
-  return {
-    isSuccess: true,
-    code: 'COMMON200',
-    message: '일정 조회 성공',
-    result: {
-      year: 2024,
-      month: 11,
-      selectedDay: 15,
-      events: [
-        {
-          id: 'team-meeting',
-          typeLabel: 'Seminar',
-          title: 'Team Meeting: AI Lab',
-          timeRange: '13:00 - 14:30',
-          location: 'Room 302',
-          joiningFriendsLabel: '3 of your friends are joining',
-          completed: true,
+// ---------------------------------------------------------------------------
+// API functions
+// ---------------------------------------------------------------------------
+
+export async function fetchMyPageOverview(context?: MyPageFallbackContext) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+
+  const data = await request<MyPageMainResponse>(
+    `/mypage?year=${year}&month=${month}`,
+    { method: 'GET' },
+    () => {
+      const dto = fallbackOverviewDto(context);
+      return {
+        profile: { name: dto.name, imageUrl: dto.profileImageUrl, introduction: '' },
+        summary: {
+          activityCount: dto.stats.postCount,
+          groupCount: dto.stats.groupCount,
+          point: dto.stats.point,
         },
-      ],
-      trendingEvent: {
-        badgeLabel: 'HOT TRENDING',
-        title: 'Career Fair 2023',
-        location: 'Main Plaza',
-      },
+        calendar: { year: 2024, month: 11, selectedDate: 15, schedules: [] },
+      } satisfies MyPageMainResponse;
     },
-  };
+  );
+
+  return mapOverviewFromBackend(data, context);
 }
 
-function fallbackSettings(context?: MyPageFallbackContext): MyPageApiEnvelope<MyPageSettingsDto> {
-  const identity = buildIdentity(context);
+export async function fetchAcademicSchedule() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+
+  const schedules = await request<ScheduleResponse>(
+    `/schedules?year=${year}&month=${month}`,
+    { method: 'GET' },
+    () => [] as ScheduleResponse,
+  );
+
+  const eventDays = schedules.filter((s) => s.hasSchedule).map((s) => new Date(s.date).getDate());
+
+  const selectedDay = now.getDate();
+  const selectedDateIso = `${year}-${String(month).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`;
 
   return {
-    isSuccess: true,
-    code: 'SETTING2001',
-    message: '설정 조회에 성공했습니다.',
-    result: {
-      profile: {
-        name: identity.displayName === 'Kim Min-jun' ? 'Alex Kim' : identity.displayName,
-        major: identity.major,
-        grade: 'Senior',
-        academicVerified: true,
-        profileImageUrl: null,
-      },
-      matchingCommunication: {
-        interestKeywords: ['Back-end', 'Guitar', 'K-Pop'],
-        preferredLanguage: 'KOREAN',
-      },
-      notifications: {
-        newMessages: true,
-        groupInvites: true,
-        postComments: false,
-        etiquetteMode: true,
-        etiquetteStartTime: '23:00',
-        etiquetteEndTime: '07:00',
-      },
-      languageRegion: {
-        appLanguage: 'ENGLISH',
-      },
-      accountSecurity: {
-        studentId: '2021034920',
-        department: 'Dept Of College of AI & Software',
-        twoFactorEnabled: false,
-      },
-      system: {
-        darkMode: false,
-      },
+    monthLabel: monthLabel(year, month),
+    selectedDayLabel: selectedDayLabel(year, month, selectedDay),
+    selectedDateIso,
+    days: buildCalendarDays(year, month, selectedDay, eventDays),
+    events: [],
+    trendingEvent: {
+      badgeLabel: 'HOT TRENDING',
+      title: 'Career Fair 2023',
+      location: 'Main Plaza',
     },
-  };
+  } satisfies AcademicScheduleViewModel;
 }
 
-export async function fetchMyPageOverview(accessToken?: string, context?: MyPageFallbackContext) {
-  const response = await request<MyPageOverviewDto>(
-    ENDPOINTS.overview,
-    {
-      method: 'GET',
-      headers: accessToken
-        ? {
-            Authorization: `Bearer ${accessToken}`,
-          }
-        : undefined,
-    },
-    () => fallbackOverview(context),
-  );
-
-  return mapOverview(response.result, context);
+export async function logoutFromMyPage() {
+  await request<void>('/auth/logout', { method: 'POST' }, () => undefined);
 }
 
-export async function fetchAcademicSchedule(accessToken?: string) {
-  const response = await request<AcademicScheduleDto>(
-    `${ENDPOINTS.schedule}?month=2024-11`,
-    {
-      method: 'GET',
-      headers: accessToken
-        ? {
-            Authorization: `Bearer ${accessToken}`,
-          }
-        : undefined,
-    },
-    fallbackSchedule,
+export async function updateMyPageProfile(requestBody: UpdateProfileRequest) {
+  console.warn(
+    'PATCH /mypage/profile endpoint is not implemented on the backend; returning mock data.',
   );
-
-  return mapSchedule(response.result);
+  const dto = fallbackOverviewDto();
+  dto.name = requestBody.name ?? dto.name;
+  dto.profileImageUrl = requestBody.profileImageUrl ?? dto.profileImageUrl;
+  return mapOverview(dto);
 }
 
-export async function updateMyPageProfile(requestBody: UpdateProfileRequest, accessToken?: string) {
-  const response = await request<MyPageOverviewDto>(
-    ENDPOINTS.profile,
-    {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(accessToken
-          ? {
-              Authorization: `Bearer ${accessToken}`,
-            }
-          : {}),
-      },
-      body: JSON.stringify(requestBody),
-    },
-    () => ({
-      isSuccess: true,
-      code: 'MEMBER2001',
-      message: '프로필 수정이 완료되었습니다.',
-      result: {
-        ...fallbackOverview().result,
-        name: requestBody.name ?? fallbackOverview().result.name,
-        profileImageUrl: requestBody.profileImageUrl ?? null,
-      },
-    }),
+export async function fetchMyPageSettings(context?: MyPageFallbackContext) {
+  console.warn(
+    'GET /mypage/settings endpoint is not implemented on the backend; returning mock data.',
   );
-
-  return mapOverview(response.result);
-}
-
-export async function logoutFromMyPage(accessToken?: string, refreshToken?: string | null) {
-  await request<Record<string, never>>(
-    ENDPOINTS.logout,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(accessToken
-          ? {
-              Authorization: `Bearer ${accessToken}`,
-            }
-          : {}),
-      },
-      body: JSON.stringify(
-        refreshToken
-          ? {
-              refreshToken,
-            }
-          : {},
-      ),
-    },
-    () => ({
-      isSuccess: true,
-      code: 'AUTH2003',
-      message: '로그아웃되었습니다.',
-      result: {},
-    }),
-  );
-}
-
-export async function fetchMyPageSettings(accessToken?: string, context?: MyPageFallbackContext) {
-  const response = await request<MyPageSettingsDto>(
-    ENDPOINTS.settings,
-    {
-      method: 'GET',
-      headers: accessToken
-        ? {
-            Authorization: `Bearer ${accessToken}`,
-          }
-        : undefined,
-    },
-    () => fallbackSettings(context),
-  );
-
-  return mapSettings(response.result);
+  return mapSettings(fallbackSettingsDto(context));
 }
 
 export async function updateMatchingCommunicationSettings(
   requestBody: UpdateMatchingCommunicationRequest,
-  accessToken?: string,
 ) {
-  const response = await request<MatchingCommunicationDto>(
-    ENDPOINTS.matchingCommunication,
-    {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(accessToken
-          ? {
-              Authorization: `Bearer ${accessToken}`,
-            }
-          : {}),
-      },
-      body: JSON.stringify(requestBody),
-    },
-    () => ({
-      isSuccess: true,
-      code: 'SETTING2002',
-      message: '관심 키워드 및 선호 언어가 수정되었습니다.',
-      result: {
-        interestKeywords: requestBody.interestKeywords ?? ['Back-end', 'Guitar', 'K-Pop'],
-        preferredLanguage: requestBody.preferredLanguage ?? 'KOREAN',
-      },
-    }),
+  console.warn(
+    'PATCH /mypage/settings/matching-communication endpoint is not implemented on the backend; returning mock data.',
   );
-
-  return response.result;
+  return {
+    interestKeywords: requestBody.interestKeywords ?? ['Back-end', 'Guitar', 'K-Pop'],
+    preferredLanguage: requestBody.preferredLanguage ?? ('KOREAN' as PreferredLanguage),
+  } satisfies MatchingCommunicationDto;
 }
 
-export async function updateNotificationSettings(
-  requestBody: UpdateNotificationSettingsRequest,
-  accessToken?: string,
-) {
-  const response = await request<NotificationSettingsDto>(
-    ENDPOINTS.notifications,
-    {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(accessToken
-          ? {
-              Authorization: `Bearer ${accessToken}`,
-            }
-          : {}),
-      },
-      body: JSON.stringify(requestBody),
-    },
-    () => ({
-      isSuccess: true,
-      code: 'SETTING2003',
-      message: '알림 설정이 수정되었습니다.',
-      result: {
-        newMessages: requestBody.newMessages ?? true,
-        groupInvites: requestBody.groupInvites ?? true,
-        postComments: requestBody.postComments ?? false,
-        etiquetteMode: requestBody.etiquetteMode ?? true,
-        etiquetteStartTime: requestBody.etiquetteStartTime ?? '23:00',
-        etiquetteEndTime: requestBody.etiquetteEndTime ?? '07:00',
-      },
-    }),
+export async function updateNotificationSettings(requestBody: UpdateNotificationSettingsRequest) {
+  console.warn(
+    'PATCH /mypage/settings/notifications endpoint is not implemented on the backend; returning mock data.',
   );
-
-  return response.result;
+  return {
+    newMessages: requestBody.newMessages ?? true,
+    groupInvites: requestBody.groupInvites ?? true,
+    postComments: requestBody.postComments ?? false,
+    etiquetteMode: requestBody.etiquetteMode ?? true,
+    etiquetteStartTime: requestBody.etiquetteStartTime ?? '23:00',
+    etiquetteEndTime: requestBody.etiquetteEndTime ?? '07:00',
+  } satisfies NotificationSettingsDto;
 }
 
-export async function updateAppLanguagePreference(
-  requestBody: UpdateAppLanguageRequest,
-  accessToken?: string,
-) {
-  const response = await request<LanguageRegionDto>(
-    ENDPOINTS.appLanguage,
-    {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(accessToken
-          ? {
-              Authorization: `Bearer ${accessToken}`,
-            }
-          : {}),
-      },
-      body: JSON.stringify(requestBody),
-    },
-    () => ({
-      isSuccess: true,
-      code: 'SETTING2004',
-      message: '앱 언어가 변경되었습니다.',
-      result: requestBody,
-    }),
+export async function updateAppLanguagePreference(requestBody: UpdateAppLanguageRequest) {
+  console.warn(
+    'PATCH /mypage/settings/app-language endpoint is not implemented on the backend; returning mock data.',
   );
-
-  return response.result;
+  return { appLanguage: requestBody.appLanguage } satisfies LanguageRegionDto;
 }
 
-export async function updateDarkModePreference(
-  requestBody: UpdateDarkModeRequest,
-  accessToken?: string,
-) {
-  const response = await request<SystemSettingsDto>(
-    ENDPOINTS.darkMode,
-    {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(accessToken
-          ? {
-              Authorization: `Bearer ${accessToken}`,
-            }
-          : {}),
-      },
-      body: JSON.stringify(requestBody),
-    },
-    () => ({
-      isSuccess: true,
-      code: 'SETTING2005',
-      message: '다크모드 설정이 변경되었습니다.',
-      result: requestBody,
-    }),
+export async function updateDarkModePreference(requestBody: UpdateDarkModeRequest) {
+  console.warn(
+    'PATCH /mypage/settings/dark-mode endpoint is not implemented on the backend; returning mock data.',
   );
-
-  return response.result;
+  return { darkMode: requestBody.darkMode } satisfies SystemSettingsDto;
 }

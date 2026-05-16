@@ -1,10 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { likeActivity, unlikeActivity } from '../../api/activity';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  fetchActivities,
+  likeActivity,
+  unlikeActivity,
+  type ActivitySummaryResponse,
+} from '../../api/activity';
 import {
   activityFilters,
-  activityItems,
   type ActivityCategory,
+  type ActivityItem,
 } from '../../features/activity/activity-data';
 import {
   ActivityFeedCard,
@@ -14,40 +20,100 @@ import {
 } from '../../features/activity/activity-ui';
 import { navigateFromBottomTab } from '../../features/navigation/bottom-tab-navigation';
 import { RequireAuth } from '../../features/session/RequireAuth';
-import { useSession } from '../../features/session/session-context';
 import { BottomTabs, ScreenFrame } from '../../features/session/ui';
 import { FloatingActionButton, HeaderIconButton, SearchIcon } from '../../features/group/group-ui';
 import { BellIcon } from '../../features/session/ui';
 
+const CATEGORY_MAP: Record<string, ActivityCategory> = {
+  Study: 'study',
+  Language: 'language',
+  Hobby: 'hobby',
+  Sports: 'sports',
+  'AI & Tech': 'ai-tech',
+  Wellness: 'wellness',
+  Design: 'design',
+};
+
+function formatSchedule(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function mapToActivityItem(a: ActivitySummaryResponse): ActivityItem {
+  const seatsLeft = a.capacity - a.currentParticipants;
+  const category = CATEGORY_MAP[a.category] ?? 'study';
+  return {
+    id: String(a.id),
+    title: a.title,
+    description: '',
+    category,
+    categoryLabel: a.category.toUpperCase(),
+    badgeLabel: a.isHotpick ? 'HOT' : `${a.currentParticipants} MEMBERS`,
+    membersLabel: `${a.currentParticipants} MEMBERS`,
+    location: '',
+    schedule: formatSchedule(a.schedule),
+    seatsLeft,
+    maxMembers: a.capacity,
+    imageVariant: 'studio',
+    isHotPick: a.isHotpick,
+    liked: a.isLiked ?? false,
+    joinState: seatsLeft <= 0 ? 'full' : 'available',
+  };
+}
+
 function ActivityPage() {
   const navigate = useNavigate();
-  const { state } = useSession();
+  const queryClient = useQueryClient();
   const [activeFilter, setActiveFilter] = useState<ActivityCategory | 'all'>('all');
-  const [likedIds, setLikedIds] = useState<Record<string, boolean>>(
-    Object.fromEntries(activityItems.map((item) => [item.id, item.liked])),
-  );
 
-  const hotPickActivity = activityItems.find((activity) => activity.isHotPick) ?? activityItems[0];
+  const { data: activityList } = useQuery({
+    queryKey: ['activities'],
+    queryFn: () => fetchActivities(),
+  });
+
+  const allActivities = (activityList?.activities ?? []).map(mapToActivityItem);
+
+  const likeMutation = useMutation({
+    mutationFn: (activityId: number) => likeActivity(activityId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['activities'] }),
+  });
+
+  const unlikeMutation = useMutation({
+    mutationFn: (activityId: number) => unlikeActivity(activityId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['activities'] }),
+  });
+
+  const [likedOverrides, setLikedOverrides] = useState<Record<string, boolean>>({});
+
+  const hotPickActivity = allActivities.find((activity) => activity.isHotPick) ?? allActivities[0];
   const visibleActivities =
     activeFilter === 'all'
-      ? activityItems.filter((activity) => !activity.isHotPick)
-      : activityItems.filter(
+      ? allActivities.filter((activity) => !activity.isHotPick)
+      : allActivities.filter(
           (activity) => activity.category === activeFilter && !activity.isHotPick,
         );
 
-  const toggleLike = async (activityId: string) => {
-    const nextLiked = !likedIds[activityId];
-    setLikedIds((prev) => ({ ...prev, [activityId]: nextLiked }));
+  const toggleLike = (activityId: string) => {
+    const currentLiked =
+      likedOverrides[activityId] ?? allActivities.find((a) => a.id === activityId)?.liked ?? false;
+    const nextLiked = !currentLiked;
+    setLikedOverrides((prev) => ({ ...prev, [activityId]: nextLiked }));
 
-    try {
-      if (nextLiked) {
-        await likeActivity(activityId, state.accessToken ?? undefined);
-      } else {
-        await unlikeActivity(activityId, state.accessToken ?? undefined);
-      }
-    } catch (error) {
-      setLikedIds((prev) => ({ ...prev, [activityId]: !nextLiked }));
-      console.error(error);
+    const numericId = Number(activityId);
+    if (nextLiked) {
+      likeMutation.mutate(numericId);
+    } else {
+      unlikeMutation.mutate(numericId);
     }
   };
 
@@ -83,7 +149,10 @@ function ActivityPage() {
                   </button>
                 </div>
                 <ActivityHotCard
-                  activity={{ ...hotPickActivity, liked: likedIds[hotPickActivity.id] }}
+                  activity={{
+                    ...hotPickActivity,
+                    liked: likedOverrides[hotPickActivity.id] ?? hotPickActivity.liked,
+                  }}
                   onOpen={() => navigate(`/activity/${hotPickActivity.id}`)}
                   onToggleLike={() => toggleLike(hotPickActivity.id)}
                 />
@@ -107,7 +176,10 @@ function ActivityPage() {
                   {visibleActivities.map((activity) => (
                     <ActivityFeedCard
                       key={activity.id}
-                      activity={{ ...activity, liked: likedIds[activity.id] }}
+                      activity={{
+                        ...activity,
+                        liked: likedOverrides[activity.id] ?? activity.liked,
+                      }}
                       onOpen={() => navigate(`/activity/${activity.id}`)}
                       onToggleLike={() => toggleLike(activity.id)}
                     />

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { joinActivity } from '../../api/activity';
-import { getActivityById, type JoinMode } from '../../features/activity/activity-data';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchActivityDetail, joinActivity, type ActivityDetailResponse } from '../../api/activity';
+import { type ActivityItem, type JoinMode } from '../../features/activity/activity-data';
 import {
   ActivityDetailCard,
   ChoiceModal,
@@ -11,8 +12,44 @@ import {
 } from '../../features/activity/activity-ui';
 import { navigateFromBottomTab } from '../../features/navigation/bottom-tab-navigation';
 import { RequireAuth } from '../../features/session/RequireAuth';
-import { useSession } from '../../features/session/session-context';
 import { BottomTabs, ScreenFrame } from '../../features/session/ui';
+
+function formatSchedule(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function mapDetailToActivityItem(detail: ActivityDetailResponse): ActivityItem {
+  const seatsLeft = detail.capacity - detail.currentParticipants;
+  return {
+    id: String(detail.id),
+    title: detail.title,
+    description: detail.description,
+    category: 'study',
+    categoryLabel: detail.category.toUpperCase(),
+    badgeLabel: detail.isHotpick ? 'HOT' : `${detail.currentParticipants} MEMBERS`,
+    membersLabel: `${detail.currentParticipants} MEMBERS`,
+    location: '',
+    schedule: formatSchedule(detail.schedule),
+    seatsLeft,
+    maxMembers: detail.capacity,
+    imageVariant: 'studio',
+    isHotPick: detail.isHotpick,
+    liked: detail.isLiked ?? false,
+    joinState: seatsLeft <= 0 ? 'full' : 'available',
+    kakaoOpenChatLink: detail.openChatUrl,
+  };
+}
 
 type DetailOverlay = 'join-choice' | 'group-select' | 'success' | 'full' | null;
 const POST_JOIN_RETURN_PATH = '/activity';
@@ -20,29 +57,56 @@ const POST_JOIN_RETURN_PATH = '/activity';
 function ActivityDetailPage() {
   const navigate = useNavigate();
   const { activityId } = useParams();
-  const { state } = useSession();
-  const activity = getActivityById(activityId ?? '');
-  const [overlay, setOverlay] = useState<DetailOverlay>(null);
-  const [selectedGroupId, setSelectedGroupId] = useState(
-    activity.groupOptions?.find((group) => group.selected)?.id ??
-      activity.groupOptions?.[0]?.id ??
-      null,
-  );
+  const numericId = Number(activityId);
+  const queryClient = useQueryClient();
 
-  const handleJoinRequest = async (_mode: JoinMode) => {
+  const { data: detail } = useQuery({
+    queryKey: ['activity', numericId],
+    queryFn: () => fetchActivityDetail(numericId),
+    enabled: !!activityId && !isNaN(numericId),
+  });
+
+  const activity = detail ? mapDetailToActivityItem(detail) : null;
+
+  const [overlay, setOverlay] = useState<DetailOverlay>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+
+  const joinMutation = useMutation({
+    mutationFn: (body: { participationType: 'INDIVIDUAL' | 'GROUP'; groupId?: number }) =>
+      joinActivity(numericId, body),
+    onSuccess: () => {
+      setOverlay('success');
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+    },
+    onError: () => setOverlay('full'),
+  });
+
+  const handleJoinRequest = (_mode: JoinMode) => {
+    if (!activity) return;
+
     if (activity.joinState === 'full') {
       setOverlay('full');
       return;
     }
 
-    try {
-      await joinActivity(activity.id, state.accessToken ?? undefined);
-      setOverlay('success');
-    } catch (error) {
-      console.error(error);
-      setOverlay('full');
+    if (_mode === 'group' && selectedGroupId) {
+      joinMutation.mutate({ participationType: 'GROUP', groupId: Number(selectedGroupId) });
+    } else {
+      joinMutation.mutate({ participationType: 'INDIVIDUAL' });
     }
   };
+
+  if (!activity) {
+    return (
+      <RequireAuth>
+        <ScreenFrame className='pb-4 pt-4'>
+          <div className='flex flex-1 items-center justify-center'>
+            <p className='text-[#6d7a90]'>Loading...</p>
+          </div>
+        </ScreenFrame>
+      </RequireAuth>
+    );
+  }
 
   return (
     <RequireAuth>
@@ -80,15 +144,15 @@ function ActivityDetailPage() {
           </ModalScrim>
         ) : null}
 
-        {overlay === 'group-select' && activity.groupOptions ? (
+        {overlay === 'group-select' ? (
           <div className='fixed inset-0 z-50 bg-[rgba(214,223,235,0.64)] backdrop-blur-sm'>
             <div className='mx-auto flex min-h-dvh w-full max-w-[430px] items-end'>
               <GroupSelectionSheet
-                groups={activity.groupOptions}
+                groups={activity.groupOptions ?? []}
                 selectedId={selectedGroupId}
                 onSelect={setSelectedGroupId}
                 onConfirm={() => {
-                  void handleJoinRequest('group');
+                  handleJoinRequest('group');
                 }}
                 onClose={() => setOverlay(null)}
               />

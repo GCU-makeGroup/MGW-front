@@ -1,7 +1,23 @@
 import clsx from 'clsx';
 import type { ReactNode } from 'react';
-import { startTransition, useEffect, useMemo, useState } from 'react';
-import { type DiscoveryCard, discoveryCards, type MainDiscoveryAction } from './discovery-data';
+import { startTransition, useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { fetchActivities, likeActivity, type ActivitySummaryResponse } from '../../api/activity';
+import { type DiscoveryCard, type MainDiscoveryAction } from './discovery-data';
+
+const themes: DiscoveryCard['theme'][] = ['teal', 'sunset', 'night'];
+
+function mapActivityToCard(activity: ActivitySummaryResponse, index: number): DiscoveryCard {
+  return {
+    id: String(activity.id),
+    badge: activity.isHotpick ? 'Hot Trending' : 'New Match',
+    title: activity.title,
+    memberCount: `${activity.currentParticipants}/${activity.capacity} Members`,
+    description: activity.category,
+    tags: [activity.category],
+    theme: themes[index % themes.length],
+  };
+}
 
 const actionMeta: Record<
   MainDiscoveryAction,
@@ -182,34 +198,67 @@ function CardSurface({
 export function MainDiscoverySection() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [pendingAction, setPendingAction] = useState<MainDiscoveryAction | null>(null);
+  const queryClient = useQueryClient();
+
+  const { data: activityList } = useQuery({
+    queryKey: ['activities', 'discovery'],
+    queryFn: () => fetchActivities({ scope: 'hotpick', limit: 20 }),
+  });
+
+  const cards: DiscoveryCard[] = useMemo(
+    () =>
+      activityList
+        ? [
+            ...(activityList.hotpick ? [mapActivityToCard(activityList.hotpick, 0)] : []),
+            ...activityList.activities.map((a, i) => mapActivityToCard(a, i + 1)),
+          ]
+        : [],
+    [activityList],
+  );
 
   const visibleCards = useMemo(
-    () => [0, 1, 2].map((offset) => discoveryCards[(activeIndex + offset) % discoveryCards.length]),
-    [activeIndex],
+    () =>
+      cards.length > 0
+        ? [0, 1, 2].map((offset) => cards[(activeIndex + offset) % cards.length])
+        : [],
+    [activeIndex, cards],
   );
 
   useEffect(() => {
-    if (!pendingAction) {
+    if (!pendingAction || cards.length === 0) {
       return;
     }
 
     const timeoutId = window.setTimeout(() => {
       startTransition(() => {
-        setActiveIndex((prevIndex) => (prevIndex + 1) % discoveryCards.length);
+        setActiveIndex((prevIndex) => (prevIndex + 1) % cards.length);
       });
       setPendingAction(null);
     }, 460);
 
     return () => window.clearTimeout(timeoutId);
-  }, [pendingAction]);
+  }, [pendingAction, cards.length]);
 
-  const triggerAction = (action: MainDiscoveryAction) => {
-    if (pendingAction) {
-      return;
-    }
+  const triggerAction = useCallback(
+    async (action: MainDiscoveryAction) => {
+      if (pendingAction || cards.length === 0) {
+        return;
+      }
 
-    setPendingAction(action);
-  };
+      const currentCard = cards[activeIndex % cards.length];
+      if (currentCard && (action === 'save' || action === 'like')) {
+        try {
+          await likeActivity(Number(currentCard.id));
+          queryClient.invalidateQueries({ queryKey: ['activities'] });
+        } catch {
+          // still animate even if like fails
+        }
+      }
+
+      setPendingAction(action);
+    },
+    [pendingAction, cards, activeIndex, queryClient],
+  );
 
   return (
     <section className='space-y-4'>
@@ -218,7 +267,7 @@ export function MainDiscoverySection() {
           Group Discovery
         </h2>
         <div className='flex items-center gap-1 text-[#ca3535]'>
-          {discoveryCards.map((card, index) => (
+          {cards.map((card, index) => (
             <span
               key={card.id}
               className={clsx(
@@ -231,11 +280,19 @@ export function MainDiscoverySection() {
       </div>
 
       <div className='relative h-[520px]'>
-        <CardSurface card={visibleCards[2]} layer='back' action={null} />
-        <CardSurface card={visibleCards[1]} layer='middle' action={null} />
-        <CardSurface card={visibleCards[0]} layer='front' action={pendingAction} />
+        {visibleCards.length >= 3 ? (
+          <>
+            <CardSurface card={visibleCards[2]} layer='back' action={null} />
+            <CardSurface card={visibleCards[1]} layer='middle' action={null} />
+            <CardSurface card={visibleCards[0]} layer='front' action={pendingAction} />
+          </>
+        ) : (
+          <div className='flex h-full items-center justify-center'>
+            <p className='text-[16px] text-[#8b97aa]'>No activities available</p>
+          </div>
+        )}
 
-        {pendingAction ? (
+        {pendingAction && visibleCards.length >= 3 ? (
           <div className='pointer-events-none absolute inset-x-0 top-5 z-40 flex justify-center'>
             <span
               className={clsx(

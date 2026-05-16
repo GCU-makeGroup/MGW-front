@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from './session-context';
+import { sendEmailCode, verifyEmailCode } from '../../api/session';
 import {
   BrandMark,
   ChoiceCard,
@@ -131,6 +132,10 @@ export function SignupPage() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isConfirmVisible, setIsConfirmVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const signupValidationError = getSignupValidationError({
     confirmPassword: state.signup.confirmPassword,
@@ -139,13 +144,52 @@ export function SignupPage() {
     universityEmail: state.signup.universityEmail,
   });
 
+  const fullEmail = `${state.signup.universityEmail.trim()}@gachon.ac.kr`;
+
+  const handleSendCode = async () => {
+    if (!state.signup.universityEmail.trim()) {
+      setError('학교 이메일 아이디를 입력해 주세요.');
+      return;
+    }
+    setIsSendingCode(true);
+    setError(null);
+    try {
+      await sendEmailCode({ email: fullEmail });
+      setEmailSent(true);
+    } catch (e) {
+      setError(getErrorMessage(e));
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (!verificationCode.trim()) {
+      setError('인증 코드를 입력해 주세요.');
+      return;
+    }
+    setIsVerifying(true);
+    setError(null);
+    try {
+      await verifyEmailCode({ email: fullEmail, code: verificationCode.trim() });
+      actions.updateSignupField('emailVerified', 'true');
+    } catch (e) {
+      setError(getErrorMessage(e));
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (signupValidationError) {
       setError(signupValidationError);
       return;
     }
-
+    if (!state.signup.emailVerified) {
+      setError('이메일 인증을 완료해 주세요.');
+      return;
+    }
     setError(null);
     navigate('/onboard/terms');
   };
@@ -172,18 +216,60 @@ export function SignupPage() {
             onChange={(value) => actions.updateSignupField('fullName', value)}
             autoComplete='name'
           />
-          <InputField
-            label='University Email'
-            placeholder='username'
-            value={state.signup.universityEmail}
-            onChange={(value) => actions.updateSignupField('universityEmail', value)}
-            autoComplete='email'
-            rightSlot={
-              <span className='rounded-full bg-sky-200 px-3 py-1 text-[12px] font-bold text-[#1f76a7]'>
-                @gachon.ac.kr
-              </span>
-            }
-          />
+          <div>
+            <InputField
+              label='University Email'
+              placeholder='username'
+              value={state.signup.universityEmail}
+              onChange={(value) => {
+                actions.updateSignupField('universityEmail', value);
+                if (state.signup.emailVerified) {
+                  actions.updateSignupField('emailVerified', '');
+                }
+                setEmailSent(false);
+              }}
+              autoComplete='email'
+              rightSlot={
+                <span className='rounded-full bg-sky-200 px-3 py-1 text-[12px] font-bold text-[#1f76a7]'>
+                  @gachon.ac.kr
+                </span>
+              }
+            />
+            <div className='mt-2 flex items-center gap-2'>
+              <PrimaryButton
+                type='button'
+                onClick={handleSendCode}
+                disabled={isSendingCode || !state.signup.universityEmail.trim()}
+                className='flex-shrink-0 text-[13px]'
+              >
+                {isSendingCode ? '전송 중...' : emailSent ? '재전송' : '인증 코드 전송'}
+              </PrimaryButton>
+              {state.signup.emailVerified && (
+                <span className='text-[13px] font-semibold text-emerald-600'>인증 완료</span>
+              )}
+            </div>
+          </div>
+
+          {emailSent && !state.signup.emailVerified && (
+            <div className='flex items-end gap-2'>
+              <InputField
+                label='인증 코드'
+                placeholder='6자리 숫자'
+                value={verificationCode}
+                onChange={setVerificationCode}
+                autoComplete='one-time-code'
+              />
+              <PrimaryButton
+                type='button'
+                onClick={handleVerifyCode}
+                disabled={isVerifying || verificationCode.trim().length === 0}
+                className='flex-shrink-0 text-[13px]'
+              >
+                {isVerifying ? '확인 중...' : '확인'}
+              </PrimaryButton>
+            </div>
+          )}
+
           <InputField
             label='Password'
             type={isPasswordVisible ? 'text' : 'password'}

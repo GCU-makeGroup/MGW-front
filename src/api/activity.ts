@@ -1,198 +1,187 @@
-import type { ApiEnvelope } from './session';
+import { request, uploadFile } from './client';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '');
-
-const ENDPOINTS = {
-  list: '/activities',
-  detail: (activityId: string) => `/activities/${activityId}`,
-  create: '/activities',
-  join: (activityId: string) => `/activities/${activityId}/members`,
-  like: (activityId: string) => `/activities/${activityId}/likes`,
-} as const;
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 export type ActivitySummaryResponse = {
-  activityId: string;
+  id: number;
   title: string;
-  subtitle?: string;
-  description: string;
-  maxMembers: number;
-  currentMembers: number;
+  category: string;
+  capacity: number;
+  currentParticipants: number;
+  isLiked: boolean | null;
+  likeCount: number;
+  schedule: string;
+  thumbnail: string;
+  isHotpick: boolean;
 };
 
 export type ActivityDetailResponse = ActivitySummaryResponse & {
-  location: string;
-  schedule: string;
-  liked: boolean;
+  description: string;
+  members: { userId: number; name: string; profileImg: string }[];
+  openChatUrl: string;
+};
+
+export type ActivityListResponse = {
+  hotpick: ActivitySummaryResponse | null;
+  activities: ActivitySummaryResponse[];
+  nextCursor: string | null;
 };
 
 export type CreateActivityRequest = {
   title: string;
-  subtitle?: string;
-  description: string;
+  categoryIds: number[];
   maxMembers: number;
-  category: string;
   schedule: string;
-  kakaoOpenChatLink?: string;
+  description: string;
+  openchatUrl: string;
+  thumbnailUrl: string;
+  location: string;
 };
 
-export type CreateActivityResponse = {
-  activityId: number;
+// ---------------------------------------------------------------------------
+// Mock fallbacks
+// ---------------------------------------------------------------------------
+
+const mockActivityList: ActivityListResponse = {
+  hotpick: null,
+  activities: [],
+  nextCursor: null,
 };
 
-function buildMockEnvelope<T>(status: number, message: string, data: T): ApiEnvelope<T> {
-  return { status, message, data };
+const mockActivityDetail: ActivityDetailResponse = {
+  id: 0,
+  title: 'Gachon Dev Studio Weekly Sprint',
+  category: 'Study',
+  capacity: 24,
+  currentParticipants: 21,
+  isLiked: false,
+  likeCount: 0,
+  schedule: new Date().toISOString(),
+  thumbnail: '',
+  isHotpick: false,
+  description: 'A collaborative session focusing on product delivery.',
+  members: [],
+  openChatUrl: '',
+};
+
+// ---------------------------------------------------------------------------
+// API functions
+// ---------------------------------------------------------------------------
+
+export async function fetchActivities(
+  params?: {
+    scope?: 'hotpick' | 'joined' | 'created';
+    category?: string;
+    cursor?: string;
+    limit?: number;
+  },
+  _accessToken?: string,
+): Promise<ActivityListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.scope) searchParams.set('scope', params.scope);
+  if (params?.category) searchParams.set('category', params.category);
+  if (params?.cursor) searchParams.set('cursor', params.cursor);
+  if (params?.limit) searchParams.set('limit', String(params.limit));
+
+  const qs = searchParams.toString();
+  const path = `/activities${qs ? `?${qs}` : ''}`;
+
+  return request<ActivityListResponse>(path, { method: 'GET' }, () => mockActivityList);
 }
 
-async function pause(ms: number) {
-  await new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-}
+export async function searchActivities(
+  keyword: string,
+  params?: { limit?: number; cursor?: string },
+  _accessToken?: string,
+): Promise<ActivityListResponse> {
+  const searchParams = new URLSearchParams({ keyword });
+  if (params?.limit) searchParams.set('limit', String(params.limit));
+  if (params?.cursor) searchParams.set('cursor', params.cursor);
 
-async function parseJsonResponse<T>(response: Response): Promise<ApiEnvelope<T>> {
-  const text = await response.text();
-
-  if (!text) {
-    throw new Error('서버 응답이 비어 있습니다.');
-  }
-
-  return JSON.parse(text) as ApiEnvelope<T>;
-}
-
-async function request<TResponse>(
-  input: string,
-  init: Parameters<typeof fetch>[1],
-  fallback: () => ApiEnvelope<TResponse>,
-): Promise<ApiEnvelope<TResponse>> {
-  if (!API_BASE_URL) {
-    await pause(250);
-    return fallback();
-  }
-
-  const response = await fetch(input, init);
-
-  if (!response.ok) {
-    let message = `요청에 실패했습니다. (${response.status})`;
-
-    try {
-      const payload = await response.json();
-      if (typeof payload?.message === 'string') {
-        message = payload.message;
-      }
-    } catch {
-      // Keep the default message.
-    }
-
-    throw new Error(message);
-  }
-
-  return parseJsonResponse<TResponse>(response);
-}
-
-export async function fetchActivities(accessToken?: string) {
-  return request<ActivitySummaryResponse[]>(
-    `${API_BASE_URL}${ENDPOINTS.list}`,
-    {
-      method: 'GET',
-      headers: accessToken
-        ? {
-            Authorization: `Bearer ${accessToken}`,
-          }
-        : undefined,
-    },
-    () => buildMockEnvelope(200, '액티비티 목록 조회 성공', []),
+  return request<ActivityListResponse>(
+    `/activities/search?${searchParams.toString()}`,
+    { method: 'GET' },
+    () => mockActivityList,
   );
 }
 
-export async function fetchActivityDetail(activityId: string, accessToken?: string) {
+export async function fetchActivityDetail(
+  activityId: number | string,
+  _accessToken?: string,
+): Promise<ActivityDetailResponse> {
   return request<ActivityDetailResponse>(
-    `${API_BASE_URL}${ENDPOINTS.detail(activityId)}`,
-    {
-      method: 'GET',
-      headers: accessToken
-        ? {
-            Authorization: `Bearer ${accessToken}`,
-          }
-        : undefined,
-    },
-    () =>
-      buildMockEnvelope(200, '액티비티 상세 조회 성공', {
-        activityId,
-        title: 'Gachon Dev Studio Weekly Sprint',
-        subtitle: 'AI & TECH',
-        description: 'A collaborative session focusing on product delivery.',
-        maxMembers: 24,
-        currentMembers: 21,
-        location: 'AI Hall, Room 302',
-        schedule: 'Every Wednesday, 14:00',
-        liked: false,
-      }),
+    `/activities/${activityId}/details`,
+    { method: 'GET' },
+    () => ({ ...mockActivityDetail, id: Number(activityId) }),
   );
 }
 
-export async function createActivity(requestBody: CreateActivityRequest, accessToken?: string) {
-  return request<CreateActivityResponse>(
-    `${API_BASE_URL}${ENDPOINTS.create}`,
+export async function createActivity(
+  body: CreateActivityRequest,
+  _accessToken?: string,
+): Promise<{ activityId: number }> {
+  return request<{ activityId: number }>(
+    '/activities',
     {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(accessToken
-          ? {
-              Authorization: `Bearer ${accessToken}`,
-            }
-          : {}),
-      },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify(body),
     },
-    () =>
-      buildMockEnvelope(201, '액티비티 생성 성공', {
-        activityId: Date.now(),
-      }),
+    () => ({ activityId: Date.now() }),
   );
 }
 
-export async function joinActivity(activityId: string, accessToken?: string) {
-  return request<null>(
-    `${API_BASE_URL}${ENDPOINTS.join(activityId)}`,
+export async function joinActivity(
+  activityId: number | string,
+  body?: { participationType: 'INDIVIDUAL' | 'GROUP'; groupId?: number },
+  _accessToken?: string,
+): Promise<{ activityId: number }> {
+  return request<{ activityId: number }>(
+    `/activities/${activityId}/members`,
     {
       method: 'POST',
-      headers: accessToken
-        ? {
-            Authorization: `Bearer ${accessToken}`,
-          }
-        : undefined,
+      body: JSON.stringify(body ?? { participationType: 'INDIVIDUAL' }),
     },
-    () => buildMockEnvelope(200, '액티비티 참여 성공', null),
+    () => ({ activityId: Number(activityId) }),
   );
 }
 
-export async function likeActivity(activityId: string, accessToken?: string) {
-  return request<null>(
-    `${API_BASE_URL}${ENDPOINTS.like(activityId)}`,
-    {
-      method: 'POST',
-      headers: accessToken
-        ? {
-            Authorization: `Bearer ${accessToken}`,
-          }
-        : undefined,
-    },
-    () => buildMockEnvelope(200, '액티비티 좋아요 성공', null),
+export async function leaveActivity(
+  activityId: number | string,
+  _accessToken?: string,
+): Promise<{ activityId: number }> {
+  return request<{ activityId: number }>(
+    `/activities/${activityId}/members`,
+    { method: 'DELETE' },
+    () => ({ activityId: Number(activityId) }),
   );
 }
 
-export async function unlikeActivity(activityId: string, accessToken?: string) {
-  return request<null>(
-    `${API_BASE_URL}${ENDPOINTS.like(activityId)}`,
-    {
-      method: 'DELETE',
-      headers: accessToken
-        ? {
-            Authorization: `Bearer ${accessToken}`,
-          }
-        : undefined,
-    },
-    () => buildMockEnvelope(200, '액티비티 좋아요 취소 성공', null),
+export async function likeActivity(
+  activityId: number | string,
+  _accessToken?: string,
+): Promise<{ activityId: number }> {
+  return request<{ activityId: number }>(
+    `/activities/${activityId}/likes`,
+    { method: 'POST' },
+    () => ({ activityId: Number(activityId) }),
   );
+}
+
+export async function unlikeActivity(
+  activityId: number | string,
+  _accessToken?: string,
+): Promise<{ activityId: number }> {
+  return request<{ activityId: number }>(
+    `/activities/${activityId}/likes`,
+    { method: 'DELETE' },
+    () => ({ activityId: Number(activityId) }),
+  );
+}
+
+export async function uploadActivityImage(file: File): Promise<{ thumbnailUrl: string }> {
+  return uploadFile<{ thumbnailUrl: string }>('/activities/images', file, () => ({
+    thumbnailUrl: '',
+  }));
 }
