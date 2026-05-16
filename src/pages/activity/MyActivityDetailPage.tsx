@@ -1,7 +1,17 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchActivityDetail, type ActivityDetailResponse } from '../../api/activity';
-import { type ActivityItem } from '../../features/activity/activity-data';
+import { type ActivityItem, type ActivityCategory } from '../../features/activity/activity-data';
+
+const CATEGORY_MAP: Record<string, ActivityCategory> = {
+  Study: 'study',
+  Language: 'language',
+  Hobby: 'hobby',
+  Sports: 'sports',
+  'AI & Tech': 'ai-tech',
+  Wellness: 'wellness',
+  Design: 'design',
+};
 import { ManagedActivityDetailCard } from '../../features/activity/activity-ui';
 import { RequireAuth } from '../../features/session/RequireAuth';
 import { ScreenFrame } from '../../features/session/ui';
@@ -27,7 +37,7 @@ function mapDetailToActivityItem(detail: ActivityDetailResponse): ActivityItem {
     id: String(detail.id),
     title: detail.title,
     description: detail.description,
-    category: 'study',
+    category: CATEGORY_MAP[detail.category] ?? 'study',
     categoryLabel: detail.category.toUpperCase(),
     badgeLabel: detail.isHotpick ? 'HOT' : `${detail.currentParticipants} MEMBERS`,
     membersLabel: `${detail.currentParticipants} MEMBERS`,

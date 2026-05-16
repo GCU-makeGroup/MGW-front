@@ -202,7 +202,7 @@ export function MainDiscoverySection() {
 
   const { data: activityList } = useQuery({
     queryKey: ['activities', 'discovery'],
-    queryFn: () => fetchActivities({ scope: 'hotpick', limit: 20 }),
+    queryFn: () => fetchActivities({ limit: 20 }),
   });
 
   const cards: DiscoveryCard[] = useMemo(

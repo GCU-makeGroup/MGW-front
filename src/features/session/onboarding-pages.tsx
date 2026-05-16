@@ -172,7 +172,7 @@ export function SignupPage() {
     setError(null);
     try {
       await verifyEmailCode({ email: fullEmail, code: verificationCode.trim() });
-      actions.updateSignupField('emailVerified', 'true');
+      actions.updateSignupField('emailVerified', true);
     } catch (e) {
       setError(getErrorMessage(e));
     } finally {
@@ -224,7 +224,7 @@ export function SignupPage() {
               onChange={(value) => {
                 actions.updateSignupField('universityEmail', value);
                 if (state.signup.emailVerified) {
-                  actions.updateSignupField('emailVerified', '');
+                  actions.updateSignupField('emailVerified', false);
                 }
                 setEmailSent(false);
               }}
@@ -378,7 +378,7 @@ export function TermsPage() {
 
   return (
     <ScreenFrame>
-      <TopBar onBack={() => navigate('/onboard/signup')} title='Step 1 of 5' />
+      <TopBar onBack={() => navigate('/onboard/signup')} title='Step 1 of 4' />
 
       <div className='mt-4'>
         <StepHeader
@@ -553,6 +553,12 @@ export function ReadyPage() {
     try {
       await actions.completeSignup();
       navigate('/main');
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : '회원가입에 실패했습니다. 잠시 후 다시 시도해주세요.';
+      window.alert(message);
     } finally {
       setIsSubmitting(false);
     }

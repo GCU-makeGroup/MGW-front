@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createActivity, uploadActivityImage } from '../../api/activity';
+import { useQueryClient } from '@tanstack/react-query';
 import { newActivityCategories } from '../../features/activity/activity-data';
 import {
   ActivityCapacityStepper,
@@ -28,6 +29,7 @@ const CATEGORY_ID_MAP: Record<string, number[]> = {
 
 function NewActivityPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<(typeof newActivityCategories)[number]>('Study');
   const [maxCapacity, setMaxCapacity] = useState(4);
@@ -77,9 +79,15 @@ function NewActivityPage() {
         location: location.trim(),
       });
 
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      queryClient.invalidateQueries({ queryKey: ['activities', 'joined'] });
+      queryClient.invalidateQueries({ queryKey: ['activities', 'created'] });
+      queryClient.invalidateQueries({ queryKey: ['activities', 'discovery'] });
+
       setShowSuccessModal(true);
     } catch (error) {
       console.error(error);
+      window.alert('활동 생성에 실패했습니다. 잠시 후 다시 시도해주세요.');
     }
   };
 

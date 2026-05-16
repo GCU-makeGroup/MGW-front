@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { createGroup } from '../../api/group';
+import { uploadActivityImage } from '../../api/activity';
 import { newPostCategories } from '../../features/group/group-data';
 import { navigateFromBottomTab } from '../../features/navigation/bottom-tab-navigation';
 import {
@@ -24,6 +26,7 @@ const categoryToId: Record<(typeof newPostCategories)[number], number> = {
 
 function NewGroupPostPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
   const [name, setName] = useState('');
   const [category, setCategory] = useState<(typeof newPostCategories)[number]>('Study');
@@ -61,17 +64,27 @@ function NewGroupPostPage() {
     setSubmitting(true);
 
     try {
+      let imageUrl: string | undefined;
+      if (coverImageFile) {
+        const uploadResult = await uploadActivityImage(coverImageFile);
+        imageUrl = uploadResult.thumbnailUrl;
+      }
+
       await createGroup({
         name: name.trim() || title.trim(),
         title: title.trim(),
         content: description.trim(),
+        imageUrl,
         isPublic,
         capacity: parsedCapacity,
         categoryIds: [categoryToId[category]],
       });
+
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
       navigate('/group');
     } catch (error) {
       console.error(error);
+      window.alert('그룹 생성에 실패했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setSubmitting(false);
     }

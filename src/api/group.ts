@@ -114,7 +114,7 @@ export async function fetchGroups(
 ): Promise<GroupListResponse> {
   const searchParams = new URLSearchParams();
   params?.categoryIds?.forEach((id) => searchParams.append('categoryIds', String(id)));
-  if (params?.page) searchParams.set('page', String(params.page));
+  if (params?.page !== undefined) searchParams.set('page', String(params.page));
   if (params?.size) searchParams.set('size', String(params.size));
   if (params?.sort) searchParams.set('sort', params.sort);
 
@@ -129,7 +129,7 @@ export async function fetchMyGroups(
   _accessToken?: string,
 ): Promise<GroupListResponse> {
   const searchParams = new URLSearchParams();
-  if (params?.page) searchParams.set('page', String(params.page));
+  if (params?.page !== undefined) searchParams.set('page', String(params.page));
   if (params?.size) searchParams.set('size', String(params.size));
 
   const qs = searchParams.toString();
@@ -145,7 +145,7 @@ export async function searchGroups(
   const searchParams = new URLSearchParams();
   if (params?.memberId) searchParams.set('memberId', String(params.memberId));
   if (params?.keyword) searchParams.set('keyword', params.keyword);
-  if (params?.page) searchParams.set('page', String(params.page));
+  if (params?.page !== undefined) searchParams.set('page', String(params.page));
   if (params?.size) searchParams.set('size', String(params.size));
 
   const qs = searchParams.toString();

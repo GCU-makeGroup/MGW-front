@@ -19,7 +19,7 @@ type MyPageMainResponse = {
   calendar: {
     year: number;
     month: number;
-    selectedDate: number;
+    selectedDate: string | null;
     schedules: Array<{ date: string; hasSchedule: boolean }>;
   };
 };

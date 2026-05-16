@@ -122,6 +122,9 @@ function GroupDetailPage() {
 
     try {
       await joinGroup(numericGroupId);
+      await queryClient.invalidateQueries({ queryKey: ['groupDetail', numericGroupId] });
+      await queryClient.invalidateQueries({ queryKey: ['groups'] });
+      await queryClient.refetchQueries({ queryKey: ['groups'] });
       setJoinSucceeded(true);
     } catch (error) {
       console.error(error);

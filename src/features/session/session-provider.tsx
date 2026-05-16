@@ -9,7 +9,9 @@ import { SessionContext, type SessionContextValue } from './session-context';
 import {
   getAccessToken,
   getRefreshToken,
+  getMemberInfo,
   setTokens as persistTokens,
+  setMemberInfo as persistMemberInfo,
   clearTokens as clearPersistedTokens,
 } from './token-store';
 import type {
@@ -25,14 +27,15 @@ import type {
 function buildInitialState(): SessionState {
   const accessToken = getAccessToken();
   const refreshToken = getRefreshToken();
+  const memberInfo = getMemberInfo();
 
   return {
     isAuthenticated: !!(accessToken && refreshToken),
     accessToken,
     refreshToken,
-    memberId: null,
-    memberEmail: null,
-    memberName: null,
+    memberId: memberInfo?.memberId ?? null,
+    memberEmail: memberInfo?.memberEmail ?? null,
+    memberName: memberInfo?.memberName ?? null,
     auth: {
       email: '',
       password: '',
@@ -43,6 +46,7 @@ function buildInitialState(): SessionState {
       password: '',
       confirmPassword: '',
       emailVerified: false,
+      major: '',
     },
     consent: {
       terms: false,
@@ -65,7 +69,11 @@ const initialState = buildInitialState();
 
 type SessionAction =
   | { type: 'updateAuthField'; field: keyof SessionAuthDraft; value: string }
-  | { type: 'updateSignupField'; field: keyof SessionSignupDraft; value: string }
+  | {
+      type: 'updateSignupField';
+      field: keyof SessionSignupDraft;
+      value: SessionSignupDraft[keyof SessionSignupDraft];
+    }
   | { type: 'setConsent'; field: keyof SessionConsentState; value: boolean }
   | { type: 'toggleInterest'; interest: OnboardingInterest }
   | { type: 'setPurpose'; purpose: OnboardingPurpose }
@@ -141,6 +149,7 @@ function reducer(state: SessionState, action: SessionAction): SessionState {
         isAuthenticated: action.value,
       };
     case 'setMemberInfo':
+      persistMemberInfo(action.memberId, action.memberEmail, action.memberName);
       return {
         ...state,
         memberId: action.memberId,
@@ -149,7 +158,15 @@ function reducer(state: SessionState, action: SessionAction): SessionState {
       };
     case 'resetAll':
       clearPersistedTokens();
-      return initialState;
+      return {
+        ...state,
+        isAuthenticated: false,
+        accessToken: null,
+        refreshToken: null,
+        memberId: null,
+        memberEmail: null,
+        memberName: null,
+      };
     default:
       return state;
   }
@@ -197,16 +214,30 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       return response;
     },
     async completeSignup() {
+      const email = `${state.signup.universityEmail.trim()}@gachon.ac.kr`;
+      const password = state.signup.password;
+
       const requestBody: SignupRequest = {
-        email: `${state.signup.universityEmail.trim()}@gachon.ac.kr`,
-        password: state.signup.password,
+        email,
+        password,
         name: state.signup.fullName,
       };
 
       await signupRequest(requestBody);
 
-      // Auto-login after signup
-      await actions.loginAccount();
+      // Auto-login with signup credentials
+      const response = await loginRequest({ email, password });
+      dispatch({
+        type: 'setTokens',
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+      });
+      dispatch({
+        type: 'setMemberInfo',
+        memberId: response.memberId,
+        memberEmail: response.email,
+        memberName: response.name,
+      });
     },
     resetAll() {
       dispatch({ type: 'resetAll' });

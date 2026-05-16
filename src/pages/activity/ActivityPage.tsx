@@ -85,17 +85,40 @@ function ActivityPage() {
 
   const likeMutation = useMutation({
     mutationFn: (activityId: number) => likeActivity(activityId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['activities'] }),
+    onSuccess: () => {
+      setLikedOverrides({});
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      queryClient.invalidateQueries({ queryKey: ['activities', 'discovery'] });
+    },
+    onError: (_err, activityId) => {
+      setLikedOverrides((prev) => {
+        const next = { ...prev };
+        delete next[String(activityId)];
+        return next;
+      });
+    },
   });
 
   const unlikeMutation = useMutation({
     mutationFn: (activityId: number) => unlikeActivity(activityId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['activities'] }),
+    onSuccess: () => {
+      setLikedOverrides({});
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      queryClient.invalidateQueries({ queryKey: ['activities', 'discovery'] });
+    },
+    onError: (_err, activityId) => {
+      setLikedOverrides((prev) => {
+        const next = { ...prev };
+        delete next[String(activityId)];
+        return next;
+      });
+    },
   });
 
   const [likedOverrides, setLikedOverrides] = useState<Record<string, boolean>>({});
 
-  const hotPickActivity = allActivities.find((activity) => activity.isHotPick) ?? allActivities[0];
+  const hotPickActivity =
+    allActivities.find((activity) => activity.isHotPick) ?? allActivities[0] ?? null;
   const visibleActivities =
     activeFilter === 'all'
       ? allActivities.filter((activity) => !activity.isHotPick)
@@ -148,14 +171,18 @@ function ActivityPage() {
                     See all
                   </button>
                 </div>
-                <ActivityHotCard
-                  activity={{
-                    ...hotPickActivity,
-                    liked: likedOverrides[hotPickActivity.id] ?? hotPickActivity.liked,
-                  }}
-                  onOpen={() => navigate(`/activity/${hotPickActivity.id}`)}
-                  onToggleLike={() => toggleLike(hotPickActivity.id)}
-                />
+                {hotPickActivity ? (
+                  <ActivityHotCard
+                    activity={{
+                      ...hotPickActivity,
+                      liked: likedOverrides[hotPickActivity.id] ?? hotPickActivity.liked,
+                    }}
+                    onOpen={() => navigate(`/activity/${hotPickActivity.id}`)}
+                    onToggleLike={() => toggleLike(hotPickActivity.id)}
+                  />
+                ) : (
+                  <p className='py-8 text-center text-[14px] text-slate-400'>No activities yet</p>
+                )}
               </section>
 
               <section className='space-y-4'>

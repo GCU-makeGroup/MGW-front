@@ -2,7 +2,22 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchActivityDetail, joinActivity, type ActivityDetailResponse } from '../../api/activity';
-import { type ActivityItem, type JoinMode } from '../../features/activity/activity-data';
+import { fetchMyGroups } from '../../api/group';
+import {
+  type ActivityItem,
+  type ActivityCategory,
+  type JoinMode,
+} from '../../features/activity/activity-data';
+
+const CATEGORY_MAP: Record<string, ActivityCategory> = {
+  Study: 'study',
+  Language: 'language',
+  Hobby: 'hobby',
+  Sports: 'sports',
+  'AI & Tech': 'ai-tech',
+  Wellness: 'wellness',
+  Design: 'design',
+};
 import {
   ActivityDetailCard,
   ChoiceModal,
@@ -29,13 +44,16 @@ function formatSchedule(iso: string): string {
   }
 }
 
-function mapDetailToActivityItem(detail: ActivityDetailResponse): ActivityItem {
+function mapDetailToActivityItem(
+  detail: ActivityDetailResponse,
+  groupOptions?: { id: number; name: string }[],
+): ActivityItem {
   const seatsLeft = detail.capacity - detail.currentParticipants;
   return {
     id: String(detail.id),
     title: detail.title,
     description: detail.description,
-    category: 'study',
+    category: CATEGORY_MAP[detail.category] ?? 'study',
     categoryLabel: detail.category.toUpperCase(),
     badgeLabel: detail.isHotpick ? 'HOT' : `${detail.currentParticipants} MEMBERS`,
     membersLabel: `${detail.currentParticipants} MEMBERS`,
@@ -48,6 +66,7 @@ function mapDetailToActivityItem(detail: ActivityDetailResponse): ActivityItem {
     liked: detail.isLiked ?? false,
     joinState: seatsLeft <= 0 ? 'full' : 'available',
     kakaoOpenChatLink: detail.openChatUrl,
+    groupOptions: groupOptions ?? [],
   };
 }
 
@@ -66,7 +85,14 @@ function ActivityDetailPage() {
     enabled: !!activityId && !isNaN(numericId),
   });
 
-  const activity = detail ? mapDetailToActivityItem(detail) : null;
+  const { data: myGroupsData } = useQuery({
+    queryKey: ['groups', 'my-short'],
+    queryFn: () => fetchMyGroups({ page: 0, size: 50 }),
+    enabled: !!activityId && !isNaN(numericId),
+  });
+
+  const groupOptions = myGroupsData?.groups.map((g) => ({ id: g.id, name: g.name }));
+  const activity = detail ? mapDetailToActivityItem(detail, groupOptions) : null;
 
   const [overlay, setOverlay] = useState<DetailOverlay>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
@@ -74,9 +100,14 @@ function ActivityDetailPage() {
   const joinMutation = useMutation({
     mutationFn: (body: { participationType: 'INDIVIDUAL' | 'GROUP'; groupId?: number }) =>
       joinActivity(numericId, body),
-    onSuccess: () => {
+    onSuccess: async () => {
       setOverlay('success');
-      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      await queryClient.invalidateQueries({ queryKey: ['activity', numericId] });
+      await queryClient.invalidateQueries({ queryKey: ['activities'] });
+      await queryClient.refetchQueries({ queryKey: ['activities'] });
+      await queryClient.invalidateQueries({ queryKey: ['activities', 'joined'] });
+      await queryClient.invalidateQueries({ queryKey: ['activities', 'created'] });
+      await queryClient.invalidateQueries({ queryKey: ['activities', 'discovery'] });
     },
     onError: () => setOverlay('full'),
   });

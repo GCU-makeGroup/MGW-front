@@ -88,15 +88,15 @@ function MyActivityPage() {
               <section className='space-y-4'>
                 {visibleItems.map((item) => (
                   <MyActivityListCard
-                    key={`${item.tab}-${item.title}`}
-                    item={{ ...item, liked: likedState[item.title] }}
+                    key={`${item.tab}-${item.id}`}
+                    item={{ ...item, liked: likedState[item.id] ?? item.liked }}
                     mode={activeTab}
                     onOpen={() => navigate(`/activity/my/${item.id}`)}
                     onAction={() => {
                       if (activeTab === 'joined') {
                         setLikedState((prev) => ({
                           ...prev,
-                          [item.title]: !prev[item.title],
+                          [item.id]: !prev[item.id],
                         }));
                         return;
                       }

@@ -68,6 +68,7 @@ export type SessionSignupDraft = {
   password: string;
   confirmPassword: string;
   emailVerified: boolean;
+  major: string;
 };
 
 export type SessionConsentState = {

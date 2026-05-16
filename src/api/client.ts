@@ -44,8 +44,8 @@ async function refreshAccessToken(): Promise<void> {
     return;
   }
 
-  const data: ApiResponse<{ accessToken: string }> = await res.json();
-  setTokens(data.result.accessToken, refreshToken);
+  const data: ApiResponse<{ accessToken: string; refreshToken: string }> = await res.json();
+  setTokens(data.result.accessToken, data.result.refreshToken);
 }
 
 async function runWithRefresh<T>(fn: () => Promise<T>): Promise<T> {
