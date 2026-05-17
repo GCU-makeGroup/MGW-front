@@ -573,12 +573,7 @@ export function GroupJoinSuccessView({
             <p className='line-clamp-2 text-[21px] font-extrabold leading-[1.2] tracking-[-0.05em] text-[#111827]'>
               {group.title}
             </p>
-            <GroupMemberCount
-              group={{
-                ...group,
-                currentParticipants: Math.min(group.currentParticipants + 1, group.capacity),
-              }}
-            />
+            <GroupMemberCount group={group} />
           </div>
           <span className='text-[#0d7698]'>
             <ChevronRightIcon />

@@ -42,7 +42,11 @@ function NewActivityPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const canCreate =
-    title.trim().length > 0 && description.trim().length > 0 && schedule.trim().length > 0;
+    title.trim().length > 0 &&
+    description.trim().length > 0 &&
+    schedule.trim().length > 0 &&
+    location.trim().length > 0 &&
+    kakaoLink.trim().length > 0;
 
   useEffect(() => {
     if (!coverImageFile) {

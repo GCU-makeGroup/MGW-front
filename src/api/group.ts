@@ -61,6 +61,7 @@ export type GroupDetailResponse = {
   currentMemberCount: number;
   commentCount: number;
   comments: CommentInfo[];
+  isMember: boolean;
 };
 
 export type CreateGroupRequest = {
@@ -168,22 +169,18 @@ export async function createGroup(
   body: CreateGroupRequest,
   _accessToken?: string,
 ): Promise<{ groupId: number }> {
-  return request<{ groupId: number }>(
-    '/groups',
-    {
-      method: 'POST',
-      body: JSON.stringify(body),
-    },
-    () => ({ groupId: Date.now() }),
-  );
+  return request<{ groupId: number }>('/groups', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }
 
 export async function joinGroup(groupId: number | string, _accessToken?: string): Promise<void> {
-  return request<void>(`/groups/${groupId}/members/me`, { method: 'POST' }, () => undefined);
+  return request<void>(`/groups/${groupId}/members/me`, { method: 'POST' });
 }
 
 export async function leaveGroup(groupId: number | string, _accessToken?: string): Promise<void> {
-  return request<void>(`/groups/${groupId}/members/me`, { method: 'DELETE' }, () => undefined);
+  return request<void>(`/groups/${groupId}/members/me`, { method: 'DELETE' });
 }
 
 export async function createComment(
@@ -191,12 +188,8 @@ export async function createComment(
   body: { content: string; parentId?: number },
   _accessToken?: string,
 ): Promise<{ commentId: number; authorGroupMember: boolean }> {
-  return request<{ commentId: number; authorGroupMember: boolean }>(
-    `/groups/${groupId}/comments`,
-    {
-      method: 'POST',
-      body: JSON.stringify(body),
-    },
-    () => ({ commentId: Date.now(), authorGroupMember: false }),
-  );
+  return request<{ commentId: number; authorGroupMember: boolean }>(`/groups/${groupId}/comments`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }

@@ -8,6 +8,7 @@ import {
   type GroupDetailResponse,
   type CommentInfo,
 } from '../../api/group';
+import { ApiError } from '../../api/client';
 import { type GroupComment, type GroupItem, isGroupFull } from '../../features/group/group-data';
 import { navigateFromBottomTab } from '../../features/navigation/bottom-tab-navigation';
 import {
@@ -122,11 +123,14 @@ function GroupDetailPage() {
 
     try {
       await joinGroup(numericGroupId);
-      await queryClient.invalidateQueries({ queryKey: ['groupDetail', numericGroupId] });
-      await queryClient.invalidateQueries({ queryKey: ['groups'] });
-      await queryClient.refetchQueries({ queryKey: ['groups'] });
+      await queryClient.refetchQueries({ queryKey: ['groupDetail', numericGroupId] });
+      await queryClient.refetchQueries({ queryKey: ['groups'], type: 'all' });
       setJoinSucceeded(true);
     } catch (error) {
+      if (error instanceof ApiError && error.code === 'GROUP-011') {
+        setJoinSucceeded(true);
+        return;
+      }
       console.error(error);
       setJoinError('그룹 참여에 실패했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
@@ -178,7 +182,9 @@ function GroupDetailPage() {
               <div className='space-y-5'>
                 <GroupDetailCard group={group} />
                 <div className='space-y-2'>
-                  <GroupJoinButton group={group} joining={joining} onJoin={handleJoin} />
+                  {!detail?.isMember && (
+                    <GroupJoinButton group={group} joining={joining} onJoin={handleJoin} />
+                  )}
                   {joinError ? (
                     <p className='text-center text-[13px] font-semibold text-[#d16060]'>
                       {joinError}

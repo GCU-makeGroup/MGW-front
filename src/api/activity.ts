@@ -122,14 +122,10 @@ export async function createActivity(
   body: CreateActivityRequest,
   _accessToken?: string,
 ): Promise<{ activityId: number }> {
-  return request<{ activityId: number }>(
-    '/activities',
-    {
-      method: 'POST',
-      body: JSON.stringify(body),
-    },
-    () => ({ activityId: Date.now() }),
-  );
+  return request<{ activityId: number }>('/activities', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }
 
 export async function joinActivity(
@@ -137,47 +133,37 @@ export async function joinActivity(
   body?: { participationType: 'INDIVIDUAL' | 'GROUP'; groupId?: number },
   _accessToken?: string,
 ): Promise<{ activityId: number }> {
-  return request<{ activityId: number }>(
-    `/activities/${activityId}/members`,
-    {
-      method: 'POST',
-      body: JSON.stringify(body ?? { participationType: 'INDIVIDUAL' }),
-    },
-    () => ({ activityId: Number(activityId) }),
-  );
+  return request<{ activityId: number }>(`/activities/${activityId}/members`, {
+    method: 'POST',
+    body: JSON.stringify(body ?? { participationType: 'INDIVIDUAL' }),
+  });
 }
 
 export async function leaveActivity(
   activityId: number | string,
   _accessToken?: string,
 ): Promise<{ activityId: number }> {
-  return request<{ activityId: number }>(
-    `/activities/${activityId}/members`,
-    { method: 'DELETE' },
-    () => ({ activityId: Number(activityId) }),
-  );
+  return request<{ activityId: number }>(`/activities/${activityId}/members`, {
+    method: 'DELETE',
+  });
 }
 
 export async function likeActivity(
   activityId: number | string,
   _accessToken?: string,
 ): Promise<{ activityId: number }> {
-  return request<{ activityId: number }>(
-    `/activities/${activityId}/likes`,
-    { method: 'POST' },
-    () => ({ activityId: Number(activityId) }),
-  );
+  return request<{ activityId: number }>(`/activities/${activityId}/likes`, {
+    method: 'POST',
+  });
 }
 
 export async function unlikeActivity(
   activityId: number | string,
   _accessToken?: string,
 ): Promise<{ activityId: number }> {
-  return request<{ activityId: number }>(
-    `/activities/${activityId}/likes`,
-    { method: 'DELETE' },
-    () => ({ activityId: Number(activityId) }),
-  );
+  return request<{ activityId: number }>(`/activities/${activityId}/likes`, {
+    method: 'DELETE',
+  });
 }
 
 export async function uploadActivityImage(file: File): Promise<{ thumbnailUrl: string }> {
