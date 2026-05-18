@@ -31,6 +31,36 @@ type ScheduleResponse = Array<{ date: string; hasSchedule: boolean }>;
 // Internal DTO types used by mock fallbacks (endpoints that don't exist yet)
 // ---------------------------------------------------------------------------
 
+/** Shape returned by GET /mypage/settings (actual backend) */
+type BackendSettingsResponse = {
+  profile: {
+    name: string;
+    profileImageUrl: string | null;
+    language: string;
+    darkMode: boolean;
+    messageNotification: boolean;
+    groupInviteNotification: boolean;
+    postCommentNotification: boolean;
+  };
+  matchingCommunication: {
+    preferredLanguage: string;
+  };
+  notifications: {
+    newMessages: boolean;
+    groupInvites: boolean;
+    postComments: boolean;
+  };
+  languageRegion: {
+    appLanguage: string;
+  };
+  accountSecurity: {
+    email: string;
+  };
+  system: {
+    darkMode: boolean;
+  };
+};
+
 type MyPageFallbackContext = {
   displayName?: string;
   email?: string;
@@ -271,20 +301,76 @@ function mapOverviewFromBackend(
   };
 }
 
-function mapSettings(dto: MyPageSettingsDto): MyPageSettingsViewModel {
+const LANGUAGE_MAP: Record<string, PreferredLanguage> = {
+  ko: 'KOREAN',
+  en: 'ENGLISH',
+  KOREAN: 'KOREAN',
+  ENGLISH: 'ENGLISH',
+};
+
+const APP_LANGUAGE_MAP: Record<string, AppLanguage> = {
+  ko: 'KOREAN',
+  en: 'ENGLISH',
+  KOREAN: 'KOREAN',
+  ENGLISH: 'ENGLISH',
+};
+
+function mapSettings(dto: BackendSettingsResponse | MyPageSettingsDto): MyPageSettingsViewModel {
+  const isBackend =
+    'accountSecurity' in dto &&
+    typeof (dto.accountSecurity as Record<string, unknown>).email === 'string' &&
+    !('studentId' in (dto.accountSecurity as Record<string, unknown>));
+
+  if (isBackend) {
+    const backend = dto as BackendSettingsResponse;
+    return {
+      profile: {
+        name: backend.profile.name,
+        major: '',
+        grade: '',
+        academicVerified: false,
+        profileEmoji: '👨🏻‍💼',
+      },
+      matchingCommunication: {
+        interestKeywords: [],
+        preferredLanguage: LANGUAGE_MAP[backend.matchingCommunication.preferredLanguage] ?? 'NONE',
+      },
+      notifications: {
+        newMessages: backend.notifications.newMessages,
+        groupInvites: backend.notifications.groupInvites,
+        postComments: backend.notifications.postComments,
+        etiquetteMode: false,
+        etiquetteStartTime: '23:00',
+        etiquetteEndTime: '07:00',
+      },
+      languageRegion: {
+        appLanguage: APP_LANGUAGE_MAP[backend.languageRegion.appLanguage] ?? 'ENGLISH',
+      },
+      accountSecurity: {
+        studentId: '',
+        department: backend.accountSecurity.email,
+        twoFactorEnabled: false,
+      },
+      system: {
+        darkMode: backend.system.darkMode,
+      },
+    };
+  }
+
+  const legacy = dto as MyPageSettingsDto;
   return {
     profile: {
-      name: dto.profile.name,
-      major: dto.profile.major,
-      grade: dto.profile.grade,
-      academicVerified: dto.profile.academicVerified,
+      name: legacy.profile.name,
+      major: legacy.profile.major,
+      grade: legacy.profile.grade,
+      academicVerified: legacy.profile.academicVerified,
       profileEmoji: '👨🏻‍💼',
     },
-    matchingCommunication: dto.matchingCommunication,
-    notifications: dto.notifications,
-    languageRegion: dto.languageRegion,
-    accountSecurity: dto.accountSecurity,
-    system: dto.system,
+    matchingCommunication: legacy.matchingCommunication,
+    notifications: legacy.notifications,
+    languageRegion: legacy.languageRegion,
+    accountSecurity: legacy.accountSecurity,
+    system: legacy.system,
   };
 }
 
@@ -420,8 +506,10 @@ export async function updateMyPageProfile(requestBody: UpdateProfileRequest) {
 }
 
 export async function fetchMyPageSettings(context?: MyPageFallbackContext) {
-  const data = await request<MyPageSettingsDto>('/mypage/settings', { method: 'GET' }, () =>
-    fallbackSettingsDto(context),
+  const data = await request<BackendSettingsResponse>(
+    '/mypage/settings',
+    { method: 'GET' },
+    () => fallbackSettingsDto(context) as unknown as BackendSettingsResponse,
   );
   return mapSettings(data);
 }

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchActivityDetail, joinActivity, type ActivityDetailResponse } from '../../api/activity';
 import { fetchMyGroups } from '../../api/group';
+import { ApiError } from '../../api/client';
 import {
   type ActivityItem,
   type ActivityCategory,
@@ -72,7 +73,14 @@ function mapDetailToActivityItem(
   };
 }
 
-type DetailOverlay = 'join-choice' | 'group-select' | 'success' | 'full' | null;
+type DetailOverlay =
+  | 'join-choice'
+  | 'group-select'
+  | 'success'
+  | 'full'
+  | 'already-joined'
+  | 'error'
+  | null;
 const POST_JOIN_RETURN_PATH = '/activity';
 
 function ActivityDetailPage() {
@@ -117,7 +125,19 @@ function ActivityDetailPage() {
       await queryClient.invalidateQueries({ queryKey: ['activities', 'created'] });
       await queryClient.invalidateQueries({ queryKey: ['activities', 'discovery'] });
     },
-    onError: () => setOverlay('full'),
+    onError: (err) => {
+      if (err instanceof ApiError) {
+        if (err.code === 'ACTIVITY-015') {
+          setOverlay('full');
+        } else if (err.code === 'ACTIVITY-016' || err.code === 'ACTIVITY-017') {
+          setOverlay('already-joined');
+        } else {
+          setOverlay('error');
+        }
+      } else {
+        setOverlay('error');
+      }
+    },
   });
 
   const handleJoinRequest = (_mode: JoinMode) => {
@@ -226,6 +246,30 @@ function ActivityDetailPage() {
               secondaryLabel='EXPLORE SIMILAR GROUPS'
               onPrimary={() => setOverlay(null)}
               onSecondary={() => navigate(POST_JOIN_RETURN_PATH)}
+            />
+          </ModalScrim>
+        ) : null}
+
+        {overlay === 'already-joined' ? (
+          <ModalScrim>
+            <FeedbackModal
+              tone='error'
+              title='Already Joined'
+              description='You are already participating in this activity.'
+              primaryLabel='Close'
+              onPrimary={() => setOverlay(null)}
+            />
+          </ModalScrim>
+        ) : null}
+
+        {overlay === 'error' ? (
+          <ModalScrim>
+            <FeedbackModal
+              tone='error'
+              title='Unable to Join'
+              description='An error occurred while trying to join. Please try again later.'
+              primaryLabel='Close'
+              onPrimary={() => setOverlay(null)}
             />
           </ModalScrim>
         ) : null}
