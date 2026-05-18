@@ -49,7 +49,7 @@ function MyPageSettingsPage() {
 
     async function load() {
       try {
-        const nextSettings = await fetchMyPageSettings(state.accessToken ?? undefined, {
+        const nextSettings = await fetchMyPageSettings({
           displayName,
           email: registeredEmail,
           major,
@@ -70,7 +70,7 @@ function MyPageSettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [displayName, major, registeredEmail, state.accessToken]);
+  }, [displayName, major, registeredEmail]);
 
   const handlePreferredLanguage = async (nextLanguage: PreferredLanguage) => {
     const previous = settings.matchingCommunication.preferredLanguage;
@@ -85,13 +85,10 @@ function MyPageSettingsPage() {
     setSettings(nextSettings);
 
     try {
-      await updateMatchingCommunicationSettings(
-        {
-          interestKeywords: nextSettings.matchingCommunication.interestKeywords,
-          preferredLanguage: nextLanguage,
-        },
-        state.accessToken ?? undefined,
-      );
+      await updateMatchingCommunicationSettings({
+        interestKeywords: nextSettings.matchingCommunication.interestKeywords,
+        preferredLanguage: nextLanguage,
+      });
     } catch (error) {
       console.error(error);
       setSettings((current) => ({
@@ -115,13 +112,10 @@ function MyPageSettingsPage() {
     }));
 
     try {
-      await updateMatchingCommunicationSettings(
-        {
-          interestKeywords: nextKeywords,
-          preferredLanguage: settings.matchingCommunication.preferredLanguage,
-        },
-        state.accessToken ?? undefined,
-      );
+      await updateMatchingCommunicationSettings({
+        interestKeywords: nextKeywords,
+        preferredLanguage: settings.matchingCommunication.preferredLanguage,
+      });
     } catch (error) {
       console.error(error);
       setSettings((current) => ({
@@ -150,7 +144,7 @@ function MyPageSettingsPage() {
     }));
 
     try {
-      await updateNotificationSettings(nextNotifications, state.accessToken ?? undefined);
+      await updateNotificationSettings(nextNotifications);
     } catch (error) {
       console.error(error);
       setSettings((current) => ({
@@ -172,12 +166,9 @@ function MyPageSettingsPage() {
     }));
 
     try {
-      await updateAppLanguagePreference(
-        {
-          appLanguage: nextLanguage,
-        },
-        state.accessToken ?? undefined,
-      );
+      await updateAppLanguagePreference({
+        appLanguage: nextLanguage,
+      });
     } catch (error) {
       console.error(error);
       setSettings((current) => ({
@@ -200,12 +191,9 @@ function MyPageSettingsPage() {
     }));
 
     try {
-      await updateDarkModePreference(
-        {
-          darkMode: nextValue,
-        },
-        state.accessToken ?? undefined,
-      );
+      await updateDarkModePreference({
+        darkMode: nextValue,
+      });
     } catch (error) {
       console.error(error);
       setSettings((current) => ({
@@ -219,7 +207,7 @@ function MyPageSettingsPage() {
 
   const handleSignOut = async () => {
     try {
-      await logoutFromMyPage(state.accessToken ?? undefined, state.refreshToken);
+      await logoutFromMyPage();
     } catch (error) {
       console.error(error);
     } finally {

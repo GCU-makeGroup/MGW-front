@@ -1,10 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import { navigateFromBottomTab } from '../../features/navigation/bottom-tab-navigation';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchGroups, type GroupListItemResponse } from '../../api/group';
 import {
   groupFilters,
-  groupItems,
   type GroupCategoryFilter,
+  type GroupItem,
 } from '../../features/group/group-data';
 import {
   CategoryPill,
@@ -16,18 +18,59 @@ import {
 import { RequireAuth } from '../../features/session/RequireAuth';
 import { BellIcon, BottomTabs, ScreenFrame } from '../../features/session/ui';
 
+const filterToCategoryIds: Record<Exclude<GroupCategoryFilter, 'all'>, number[]> = {
+  study: [1],
+  project: [2],
+  it: [3],
+};
+
+function formatTimeAgo(updatedAt: string): string {
+  const diffMs = Date.now() - new Date(updatedAt).getTime();
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes} min${minutes === 1 ? '' : 's'} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
+const themeEmojis = ['🧑🏻‍🎨', '👩🏻‍💻', '👨🏻', '🧑🏻‍🔬', '👩🏻‍🦱', '👨🏻‍🏫'];
+
+function mapGroupItem(item: GroupListItemResponse, index: number): GroupItem {
+  return {
+    id: String(item.id),
+    apiId: item.id,
+    badges: item.categories.map((c) => c.name),
+    category: (item.categories[0]?.name?.toLowerCase() ?? 'study') as GroupCategoryFilter,
+    title: item.title,
+    description: item.name,
+    authorName: '',
+    authorAvatar: themeEmojis[index % themeEmojis.length],
+    currentParticipants: item.currentMemberCount,
+    capacity: item.capacity,
+    likes: 0,
+    comments: item.commentCount,
+    timeAgo: formatTimeAgo(item.updatedAt),
+  };
+}
+
 function GroupPage() {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState<GroupCategoryFilter>('all');
 
-  const filteredGroups =
-    activeFilter === 'all'
-      ? groupItems
-      : groupItems.filter(
-          (group) =>
-            group.category === activeFilter ||
-            group.badges.some((badge) => badge.toLowerCase() === activeFilter),
-        );
+  const { data: groupList } = useQuery({
+    queryKey: ['groups', activeFilter],
+    queryFn: () =>
+      fetchGroups({
+        ...(activeFilter !== 'all' ? { categoryIds: filterToCategoryIds[activeFilter] } : {}),
+        page: 1,
+        size: 10,
+        sort: 'updatedAt,desc',
+      }),
+  });
+
+  const groups = groupList?.groups.map((item, i) => mapGroupItem(item, i)) ?? [];
 
   return (
     <RequireAuth>
@@ -70,14 +113,14 @@ function GroupPage() {
               </div>
 
               <div className='space-y-4 pb-24'>
-                {filteredGroups.map((group) => (
+                {groups.map((group) => (
                   <GroupFeedCard
                     key={group.id}
                     group={group}
                     onClick={() => navigate(`/group/${group.id}`)}
                   />
                 ))}
-                {filteredGroups.length === 0 ? (
+                {groups.length === 0 ? (
                   <div className='rounded-[28px] bg-white px-5 py-7 text-center shadow-[0_18px_36px_rgba(16,34,64,0.07)]'>
                     <p className='text-[17px] font-bold tracking-[-0.03em] text-[#1f2b45]'>
                       No groups in this category yet

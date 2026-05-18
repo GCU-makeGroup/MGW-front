@@ -1,20 +1,48 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { myActivityItems, type MyActivityTab } from '../../features/activity/activity-data';
+import { useQuery } from '@tanstack/react-query';
+import { fetchActivities, type ActivitySummaryResponse } from '../../api/activity';
+import { type MyActivityTab, type MyActivityItem } from '../../features/activity/activity-data';
 import { MyActivityListCard, MyActivitySegmentedTabs } from '../../features/activity/activity-ui';
 import { FloatingActionButton, HeaderIconButton, SearchIcon } from '../../features/group/group-ui';
 import { navigateFromBottomTab } from '../../features/navigation/bottom-tab-navigation';
 import { RequireAuth } from '../../features/session/RequireAuth';
 import { BackButton, BellIcon, BottomTabs, ScreenFrame } from '../../features/session/ui';
 
+function mapToMyActivityItem(a: ActivitySummaryResponse, tab: MyActivityTab): MyActivityItem {
+  return {
+    id: String(a.id),
+    tab,
+    title: a.title,
+    memberLabel: `${a.currentParticipants}/${a.capacity} MEMBERS`,
+    status: 'active' as const,
+    icon: '▱',
+    liked: a.isLiked ?? false,
+  };
+}
+
 function MyActivityPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<MyActivityTab>('joined');
-  const [likedState, setLikedState] = useState<Record<string, boolean>>(
-    Object.fromEntries(myActivityItems.map((item) => [item.title, Boolean(item.liked)])),
-  );
 
-  const visibleItems = myActivityItems.filter((item) => item.tab === activeTab);
+  const { data: joinedList } = useQuery({
+    queryKey: ['activities', 'joined'],
+    queryFn: () => fetchActivities({ scope: 'joined' }),
+  });
+
+  const { data: createdList } = useQuery({
+    queryKey: ['activities', 'created'],
+    queryFn: () => fetchActivities({ scope: 'created' }),
+  });
+
+  const joinedItems = (joinedList?.activities ?? []).map((a) => mapToMyActivityItem(a, 'joined'));
+  const createdItems = (createdList?.activities ?? []).map((a) =>
+    mapToMyActivityItem(a, 'created'),
+  );
+  const visibleItems = activeTab === 'joined' ? joinedItems : createdItems;
+
+  const [likedState, setLikedState] = useState<Record<string, boolean>>({});
+
   const createButtonToneClassName = activeTab === 'created' ? 'bg-[#7d0904]' : 'bg-[#071d43]';
 
   return (
@@ -60,15 +88,15 @@ function MyActivityPage() {
               <section className='space-y-4'>
                 {visibleItems.map((item) => (
                   <MyActivityListCard
-                    key={`${item.tab}-${item.title}`}
-                    item={{ ...item, liked: likedState[item.title] }}
+                    key={`${item.tab}-${item.id}`}
+                    item={{ ...item, liked: likedState[item.id] ?? item.liked }}
                     mode={activeTab}
                     onOpen={() => navigate(`/activity/my/${item.id}`)}
                     onAction={() => {
                       if (activeTab === 'joined') {
                         setLikedState((prev) => ({
                           ...prev,
-                          [item.title]: !prev[item.title],
+                          [item.id]: !prev[item.id],
                         }));
                         return;
                       }

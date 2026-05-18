@@ -76,12 +76,12 @@ function MyPagePage() {
     async function load() {
       try {
         const [nextOverview, nextSchedule] = await Promise.all([
-          fetchMyPageOverview(state.accessToken ?? undefined, {
+          fetchMyPageOverview({
             displayName,
             major,
             email: registeredEmail,
           }),
-          fetchAcademicSchedule(state.accessToken ?? undefined),
+          fetchAcademicSchedule(),
         ]);
 
         if (cancelled) {
@@ -101,7 +101,7 @@ function MyPagePage() {
     return () => {
       cancelled = true;
     };
-  }, [displayName, major, registeredEmail, state.accessToken]);
+  }, [displayName, major, registeredEmail]);
 
   const handleSelectDay = (dayKey: string) => {
     const nextSchedule = selectScheduleDay(schedule, scheduleSource, dayKey);
@@ -111,7 +111,7 @@ function MyPagePage() {
 
   const handleLogout = async () => {
     try {
-      await logoutFromMyPage(state.accessToken ?? undefined, state.refreshToken);
+      await logoutFromMyPage();
     } catch (error) {
       console.error(error);
     } finally {

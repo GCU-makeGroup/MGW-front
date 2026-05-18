@@ -67,9 +67,8 @@ export type SessionSignupDraft = {
   universityEmail: string;
   password: string;
   confirmPassword: string;
+  emailVerified: boolean;
   major: string;
-  studentId: string;
-  emailToken: string;
 };
 
 export type SessionConsentState = {
@@ -89,6 +88,9 @@ export type SessionState = {
   isAuthenticated: boolean;
   accessToken: string | null;
   refreshToken: string | null;
+  memberId: number | null;
+  memberEmail: string | null;
+  memberName: string | null;
   auth: SessionAuthDraft;
   signup: SessionSignupDraft;
   consent: SessionConsentState;

@@ -6,6 +6,14 @@ import {
   type SignupRequest,
 } from '../../api/session';
 import { SessionContext, type SessionContextValue } from './session-context';
+import {
+  getAccessToken,
+  getRefreshToken,
+  getMemberInfo,
+  setTokens as persistTokens,
+  setMemberInfo as persistMemberInfo,
+  clearTokens as clearPersistedTokens,
+} from './token-store';
 import type {
   NotificationKey,
   OnboardingInterest,
@@ -16,48 +24,63 @@ import type {
   SessionState,
 } from './session-types';
 
-const initialState: SessionState = {
-  isAuthenticated: false,
-  accessToken: null,
-  refreshToken: null,
-  auth: {
-    email: '',
-    password: '',
-  },
-  signup: {
-    fullName: '',
-    universityEmail: '',
-    password: '',
-    confirmPassword: '',
-    major: '',
-    studentId: '',
-    emailToken: '',
-  },
-  consent: {
-    terms: false,
-    privacy: false,
-    marketing: false,
-  },
-  preferences: {
-    interests: [],
-    purpose: null,
-  },
-  notifications: {
-    newMessages: true,
-    groupInvites: true,
-    etiquetteMode: false,
-  },
-};
+function buildInitialState(): SessionState {
+  const accessToken = getAccessToken();
+  const refreshToken = getRefreshToken();
+  const memberInfo = getMemberInfo();
+
+  return {
+    isAuthenticated: !!(accessToken && refreshToken),
+    accessToken,
+    refreshToken,
+    memberId: memberInfo?.memberId ?? null,
+    memberEmail: memberInfo?.memberEmail ?? null,
+    memberName: memberInfo?.memberName ?? null,
+    auth: {
+      email: '',
+      password: '',
+    },
+    signup: {
+      fullName: '',
+      universityEmail: '',
+      password: '',
+      confirmPassword: '',
+      emailVerified: false,
+      major: '',
+    },
+    consent: {
+      terms: false,
+      privacy: false,
+      marketing: false,
+    },
+    preferences: {
+      interests: [],
+      purpose: null,
+    },
+    notifications: {
+      newMessages: true,
+      groupInvites: true,
+      etiquetteMode: false,
+    },
+  };
+}
+
+const initialState = buildInitialState();
 
 type SessionAction =
   | { type: 'updateAuthField'; field: keyof SessionAuthDraft; value: string }
-  | { type: 'updateSignupField'; field: keyof SessionSignupDraft; value: string }
+  | {
+      type: 'updateSignupField';
+      field: keyof SessionSignupDraft;
+      value: SessionSignupDraft[keyof SessionSignupDraft];
+    }
   | { type: 'setConsent'; field: keyof SessionConsentState; value: boolean }
   | { type: 'toggleInterest'; interest: OnboardingInterest }
   | { type: 'setPurpose'; purpose: OnboardingPurpose }
   | { type: 'setNotification'; key: NotificationKey; value: boolean }
   | { type: 'setTokens'; accessToken: string; refreshToken: string }
   | { type: 'setAuthenticated'; value: boolean }
+  | { type: 'setMemberInfo'; memberId: number; memberEmail: string; memberName: string }
   | { type: 'resetAll' };
 
 function reducer(state: SessionState, action: SessionAction): SessionState {
@@ -113,6 +136,7 @@ function reducer(state: SessionState, action: SessionAction): SessionState {
         },
       };
     case 'setTokens':
+      persistTokens(action.accessToken, action.refreshToken);
       return {
         ...state,
         isAuthenticated: true,
@@ -124,8 +148,25 @@ function reducer(state: SessionState, action: SessionAction): SessionState {
         ...state,
         isAuthenticated: action.value,
       };
+    case 'setMemberInfo':
+      persistMemberInfo(action.memberId, action.memberEmail, action.memberName);
+      return {
+        ...state,
+        memberId: action.memberId,
+        memberEmail: action.memberEmail,
+        memberName: action.memberName,
+      };
     case 'resetAll':
-      return initialState;
+      clearPersistedTokens();
+      return {
+        ...state,
+        isAuthenticated: false,
+        accessToken: null,
+        refreshToken: null,
+        memberId: null,
+        memberEmail: null,
+        memberName: null,
+      };
     default:
       return state;
   }
@@ -161,24 +202,42 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const response = await loginRequest(requestBody);
       dispatch({
         type: 'setTokens',
-        accessToken: response.data.accessToken,
-        refreshToken: response.data.refreshToken,
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
       });
-      return response.data;
+      dispatch({
+        type: 'setMemberInfo',
+        memberId: response.memberId,
+        memberEmail: response.email,
+        memberName: response.name,
+      });
+      return response;
     },
     async completeSignup() {
+      const email = `${state.signup.universityEmail.trim()}@gachon.ac.kr`;
+      const password = state.signup.password;
+
       const requestBody: SignupRequest = {
-        email: `${state.signup.universityEmail.trim()}@gachon.ac.kr`,
-        password: state.signup.password,
+        email,
+        password,
         name: state.signup.fullName,
-        major: state.signup.major.trim() || undefined,
-        studentId: state.signup.studentId.trim() ? Number(state.signup.studentId) : undefined,
-        emailToken: state.signup.emailToken || undefined,
       };
 
       await signupRequest(requestBody);
 
-      dispatch({ type: 'setAuthenticated', value: true });
+      // Auto-login with signup credentials
+      const response = await loginRequest({ email, password });
+      dispatch({
+        type: 'setTokens',
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+      });
+      dispatch({
+        type: 'setMemberInfo',
+        memberId: response.memberId,
+        memberEmail: response.email,
+        memberName: response.name,
+      });
     },
     resetAll() {
       dispatch({ type: 'resetAll' });

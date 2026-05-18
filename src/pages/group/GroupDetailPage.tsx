@@ -1,7 +1,15 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useState } from 'react';
-import { joinGroup } from '../../api/group';
-import { groupComments, groupItems, isGroupFull } from '../../features/group/group-data';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  fetchGroupDetail,
+  joinGroup,
+  createComment,
+  type GroupDetailResponse,
+  type CommentInfo,
+} from '../../api/group';
+import { ApiError } from '../../api/client';
+import { type GroupComment, type GroupItem, isGroupFull } from '../../features/group/group-data';
 import { navigateFromBottomTab } from '../../features/navigation/bottom-tab-navigation';
 import {
   GroupCommentCard,
@@ -13,20 +21,89 @@ import {
   SearchIcon,
 } from '../../features/group/group-ui';
 import { RequireAuth } from '../../features/session/RequireAuth';
-import { useSession } from '../../features/session/session-context';
 import { BackButton, BellIcon, BottomTabs, ScreenFrame } from '../../features/session/ui';
+
+function formatTimeAgo(dateStr: string): string {
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes} min${minutes === 1 ? '' : 's'} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
+function mapDetailToGroupItem(detail: GroupDetailResponse): GroupItem {
+  return {
+    id: String(detail.id),
+    apiId: detail.id,
+    badges: detail.categories.map((c) => c.name),
+    detailBadges: detail.categories.map((c) => c.name),
+    category: (detail.categories[0]?.name?.toLowerCase() ?? 'study') as
+      | 'all'
+      | 'study'
+      | 'project'
+      | 'it',
+    title: detail.title,
+    description: detail.name,
+    detailDescription: detail.content,
+    authorName: detail.author.name,
+    authorAvatar: detail.author.imageUrl ?? '👤',
+    currentParticipants: detail.currentMemberCount,
+    capacity: detail.capacity,
+    likes: 0,
+    comments: detail.commentCount,
+    timeAgo: formatTimeAgo(detail.updatedAt),
+  };
+}
+
+function mapCommentInfo(comment: CommentInfo): GroupComment {
+  return {
+    id: String(comment.id),
+    author: comment.author.name,
+    avatar: comment.author.imageUrl ?? '👤',
+    timeAgo: formatTimeAgo(comment.createdAt),
+    message: comment.content,
+  };
+}
 
 function GroupDetailPage() {
   const navigate = useNavigate();
   const { groupId } = useParams();
-  const { state } = useSession();
+  const queryClient = useQueryClient();
+  const numericGroupId = Number(groupId);
   const [comment, setComment] = useState('');
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joinSucceeded, setJoinSucceeded] = useState(false);
 
-  const group = groupItems.find((item) => item.id === groupId) ?? groupItems[0];
-  const comments = groupComments[group.id] ?? [];
+  const { data: detail } = useQuery({
+    queryKey: ['groupDetail', numericGroupId],
+    queryFn: () => fetchGroupDetail(numericGroupId),
+    enabled: Number.isFinite(numericGroupId),
+  });
+
+  const group: GroupItem = detail
+    ? mapDetailToGroupItem(detail)
+    : {
+        id: String(numericGroupId),
+        apiId: numericGroupId,
+        badges: [],
+        category: 'study',
+        title: '',
+        description: '',
+        authorName: '',
+        authorAvatar: '👤',
+        currentParticipants: 0,
+        capacity: 0,
+        likes: 0,
+        comments: 0,
+        timeAgo: '',
+      };
+
+  const comments: GroupComment[] = detail?.comments.map(mapCommentInfo) ?? [];
+
   const handleBack = () => {
     if (window.history.length > 1) {
       navigate(-1);
@@ -35,6 +112,7 @@ function GroupDetailPage() {
 
     navigate('/group');
   };
+
   const handleJoin = async () => {
     if (joining || isGroupFull(group)) {
       return;
@@ -44,13 +122,33 @@ function GroupDetailPage() {
     setJoinError(null);
 
     try {
-      await joinGroup(group.apiId, state.accessToken ?? undefined);
+      await joinGroup(numericGroupId);
+      await queryClient.refetchQueries({ queryKey: ['groupDetail', numericGroupId] });
+      await queryClient.refetchQueries({ queryKey: ['groups'], type: 'all' });
       setJoinSucceeded(true);
     } catch (error) {
+      if (error instanceof ApiError && error.code === 'GROUP-011') {
+        setJoinSucceeded(true);
+        return;
+      }
       console.error(error);
       setJoinError('그룹 참여에 실패했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setJoining(false);
+    }
+  };
+
+  const handleSubmitComment = async () => {
+    if (!comment.trim()) {
+      return;
+    }
+
+    try {
+      await createComment(numericGroupId, { content: comment.trim() });
+      setComment('');
+      queryClient.invalidateQueries({ queryKey: ['groupDetail', numericGroupId] });
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -84,7 +182,9 @@ function GroupDetailPage() {
               <div className='space-y-5'>
                 <GroupDetailCard group={group} />
                 <div className='space-y-2'>
-                  <GroupJoinButton group={group} joining={joining} onJoin={handleJoin} />
+                  {!detail?.isMember && (
+                    <GroupJoinButton group={group} joining={joining} onJoin={handleJoin} />
+                  )}
                   {joinError ? (
                     <p className='text-center text-[13px] font-semibold text-[#d16060]'>
                       {joinError}
@@ -104,17 +204,7 @@ function GroupDetailPage() {
             </main>
 
             <div className='space-y-3'>
-              <GroupComposer
-                value={comment}
-                onChange={setComment}
-                onSubmit={() => {
-                  if (!comment.trim()) {
-                    return;
-                  }
-
-                  setComment('');
-                }}
-              />
+              <GroupComposer value={comment} onChange={setComment} onSubmit={handleSubmitComment} />
               <BottomTabs
                 active='group'
                 onNavigate={(tab) => navigateFromBottomTab(navigate, tab)}

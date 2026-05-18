@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createActivity } from '../../api/activity';
+import { createActivity, uploadActivityImage } from '../../api/activity';
+import { useQueryClient } from '@tanstack/react-query';
 import { newActivityCategories } from '../../features/activity/activity-data';
 import {
   ActivityCapacityStepper,
@@ -10,7 +11,6 @@ import {
   ModalScrim,
 } from '../../features/activity/activity-ui';
 import { RequireAuth } from '../../features/session/RequireAuth';
-import { useSession } from '../../features/session/session-context';
 import { ScreenFrame } from '../../features/session/ui';
 import {
   CalendarIcon,
@@ -20,21 +20,33 @@ import {
   NewPostTextArea,
 } from '../../features/group/group-ui';
 
+const CATEGORY_ID_MAP: Record<string, number[]> = {
+  Study: [1],
+  Language: [2],
+  Hobby: [3],
+  Sports: [4],
+};
+
 function NewActivityPage() {
   const navigate = useNavigate();
-  const { state } = useSession();
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<(typeof newActivityCategories)[number]>('Study');
   const [maxCapacity, setMaxCapacity] = useState(4);
   const [schedule, setSchedule] = useState('');
   const [description, setDescription] = useState('');
   const [kakaoLink, setKakaoLink] = useState('');
+  const [location, setLocation] = useState('');
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [coverImagePreviewUrl, setCoverImagePreviewUrl] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const canCreate =
-    title.trim().length > 0 && description.trim().length > 0 && schedule.trim().length > 0;
+    title.trim().length > 0 &&
+    description.trim().length > 0 &&
+    schedule.trim().length > 0 &&
+    location.trim().length > 0 &&
+    kakaoLink.trim().length > 0;
 
   useEffect(() => {
     if (!coverImageFile) {
@@ -54,22 +66,32 @@ function NewActivityPage() {
     }
 
     try {
-      await createActivity(
-        {
-          title: title.trim(),
-          description: description.trim(),
-          maxMembers: maxCapacity,
-          category,
-          schedule,
-          kakaoOpenChatLink: kakaoLink.trim() || undefined,
-        },
-        state.accessToken ?? undefined,
-      );
+      let thumbnailUrl = '';
+      if (coverImageFile) {
+        const uploadResult = await uploadActivityImage(coverImageFile);
+        thumbnailUrl = uploadResult.thumbnailUrl;
+      }
 
-      console.info('Activity cover image ready for upload', coverImageFile);
+      await createActivity({
+        title: title.trim(),
+        description: description.trim(),
+        maxMembers: maxCapacity,
+        categoryIds: CATEGORY_ID_MAP[category] ?? [1],
+        schedule: schedule ? `${schedule}+09:00` : schedule,
+        openchatUrl: kakaoLink.trim(),
+        thumbnailUrl,
+        location: location.trim(),
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      queryClient.invalidateQueries({ queryKey: ['activities', 'joined'] });
+      queryClient.invalidateQueries({ queryKey: ['activities', 'created'] });
+      queryClient.invalidateQueries({ queryKey: ['activities', 'discovery'] });
+
       setShowSuccessModal(true);
     } catch (error) {
       console.error(error);
+      window.alert('활동 생성에 실패했습니다. 잠시 후 다시 시도해주세요.');
     }
   };
 
@@ -144,6 +166,14 @@ function NewActivityPage() {
                         <CalendarIcon />
                       </span>
                     </div>
+                  </NewPostField>
+
+                  <NewPostField label='LOCATION'>
+                    <NewPostInput
+                      placeholder='Enter activity location'
+                      value={location}
+                      onChange={setLocation}
+                    />
                   </NewPostField>
                 </div>
               </section>
