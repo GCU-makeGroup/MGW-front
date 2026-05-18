@@ -150,3 +150,24 @@ export async function logout(): Promise<void> {
     () => undefined,
   );
 }
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  return request<void>('/auth/password', {
+    method: 'PATCH',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
+
+export async function withdrawAccount(): Promise<void> {
+  return request<void>('/auth/withdraw', { method: 'DELETE' });
+}
+
+export async function savePreferences(preferences: {
+  interestKeywords?: string[];
+  purpose?: string;
+}): Promise<void> {
+  return request<void>('/auth/preferences', {
+    method: 'POST',
+    body: JSON.stringify(preferences),
+  });
+}

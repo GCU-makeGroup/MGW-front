@@ -22,10 +22,12 @@ export type GroupItem = {
 
 export type GroupComment = {
   id: string;
+  authorId: number;
   author: string;
   avatar: string;
   timeAgo: string;
   message: string;
+  parentId: string | null;
 };
 
 export const groupFilters: Array<{ value: GroupCategoryFilter; label: string }> = [
@@ -105,26 +107,32 @@ export const groupComments: Record<string, GroupComment[]> = {
   'gachon-uiux-design-study': [
     {
       id: 'comment-1',
+      authorId: 0,
       author: 'Sarah Lee',
       avatar: '👩🏻',
       timeAgo: '1 min ago',
-      message: 'Can I join even if I’m a freshman? I really want to learn Figma!',
+      message: "Can I join even if I'm a freshman? I really want to learn Figma!",
+      parentId: null,
     },
     {
       id: 'comment-2',
+      authorId: 0,
       author: 'James Park',
       avatar: '👨🏻',
       timeAgo: 'Just now',
-      message: 'I’m interested! I’ve used Figma a bit but want to get better. See you Tuesday!',
+      message: "I'm interested! I've used Figma a bit but want to get better. See you Tuesday!",
+      parentId: null,
     },
   ],
   'react-native-side-project': [
     {
       id: 'comment-3',
+      authorId: 0,
       author: 'Jisoo Han',
       avatar: '👩🏻‍🦱',
       timeAgo: '4 mins ago',
       message: 'Is there still an opening for someone who can help with product design?',
+      parentId: null,
     },
   ],
 };

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   fetchMyPageSettings,
-  logoutFromMyPage,
   updateAppLanguagePreference,
   updateDarkModePreference,
   updateMatchingCommunicationSettings,
@@ -10,6 +9,7 @@ import {
   type MyPageSettingsViewModel,
   type PreferredLanguage,
 } from '../../api/mypage';
+import { changePassword, withdrawAccount } from '../../api/session';
 import {
   appLanguageLabels,
   createMyPageFallbackContext,
@@ -43,6 +43,11 @@ function MyPageSettingsPage() {
   const [deactivationEmail, setDeactivationEmail] = useState('');
   const [showDangerModal, setShowDangerModal] = useState(false);
   const [infoMessage, setInfoMessage] = useState('');
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -205,9 +210,33 @@ function MyPageSettingsPage() {
     }
   };
 
-  const handleSignOut = async () => {
+  const handleChangePassword = async () => {
+    setPasswordError(null);
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters.');
+      return;
+    }
     try {
-      await logoutFromMyPage();
+      await changePassword(currentPassword, newPassword);
+      setShowPasswordModal(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setInfoMessage('Password changed successfully.');
+    } catch (error) {
+      console.error(error);
+      setPasswordError('Failed to change password. Check your current password.');
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (deactivationEmail !== registeredEmail) return;
+    try {
+      await withdrawAccount();
     } catch (error) {
       console.error(error);
     } finally {
@@ -342,7 +371,17 @@ function MyPageSettingsPage() {
                     );
                   }}
                 />
-                <SettingsLinkRow icon='🔐' title='Change Password' />
+                <SettingsLinkRow
+                  icon='🔐'
+                  title='Change Password'
+                  onClick={() => {
+                    setPasswordError(null);
+                    setCurrentPassword('');
+                    setNewPassword('');
+                    setConfirmPassword('');
+                    setShowPasswordModal(true);
+                  }}
+                />
                 <SettingsToggleRow
                   icon='🛡️'
                   title='Two-Factor Authentication'
@@ -408,9 +447,60 @@ function MyPageSettingsPage() {
               setShowDangerModal(false);
             }}
             onConfirm={() => {
-              void handleSignOut();
+              void handleWithdraw();
             }}
           />
+        ) : null}
+
+        {showPasswordModal ? (
+          <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6'>
+            <div className='w-full max-w-sm rounded-[24px] bg-white p-6 shadow-xl'>
+              <h2 className='text-[18px] font-bold text-[#1f2b45]'>Change Password</h2>
+              <div className='mt-4 space-y-3'>
+                <input
+                  type='password'
+                  placeholder='Current password'
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className='w-full rounded-xl border border-[#d8e1f0] px-4 py-3 text-[14px] outline-none focus:border-[#0879f2]'
+                />
+                <input
+                  type='password'
+                  placeholder='New password (8+ characters)'
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className='w-full rounded-xl border border-[#d8e1f0] px-4 py-3 text-[14px] outline-none focus:border-[#0879f2]'
+                />
+                <input
+                  type='password'
+                  placeholder='Confirm new password'
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className='w-full rounded-xl border border-[#d8e1f0] px-4 py-3 text-[14px] outline-none focus:border-[#0879f2]'
+                />
+                {passwordError ? (
+                  <p className='text-[13px] font-semibold text-[#d16060]'>{passwordError}</p>
+                ) : null}
+              </div>
+              <div className='mt-5 flex gap-3'>
+                <button
+                  type='button'
+                  onClick={() => setShowPasswordModal(false)}
+                  className='flex-1 rounded-xl border border-[#d8e1f0] py-3 text-[14px] font-bold text-[#8090aa]'
+                >
+                  Cancel
+                </button>
+                <button
+                  type='button'
+                  onClick={() => void handleChangePassword()}
+                  disabled={!currentPassword || !newPassword || !confirmPassword}
+                  className='flex-1 rounded-xl bg-[#0879f2] py-3 text-[14px] font-bold text-white disabled:bg-[#bfd0e8]'
+                >
+                  Change
+                </button>
+              </div>
+            </div>
+          </div>
         ) : null}
       </ScreenFrame>
     </RequireAuth>

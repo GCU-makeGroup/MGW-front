@@ -538,6 +538,19 @@ export function GroupJoinButton({
   );
 }
 
+export function GroupLeaveButton({ leaving, onLeave }: { leaving: boolean; onLeave: () => void }) {
+  return (
+    <button
+      type='button'
+      onClick={onLeave}
+      disabled={leaving}
+      className='inline-flex h-[48px] w-full items-center justify-center gap-2 rounded-[24px] text-[15px] font-bold tracking-[-0.02em] text-[#8090aa] border border-[#d8e1f0] transition hover:bg-[#f5f7fa] disabled:opacity-50'
+    >
+      {leaving ? 'Leaving...' : 'Leave Group'}
+    </button>
+  );
+}
+
 export function GroupJoinSuccessView({
   group,
   onBackToGroup,
@@ -592,7 +605,29 @@ export function GroupJoinSuccessView({
   );
 }
 
-export function GroupCommentCard({ comment }: { comment: GroupComment }) {
+export function GroupCommentCard({
+  comment,
+  isOwnComment = false,
+  editing = false,
+  editValue = '',
+  onEditValueChange,
+  onEdit,
+  onEditCancel,
+  onEditSave,
+  onDelete,
+  onReply,
+}: {
+  comment: GroupComment;
+  isOwnComment?: boolean;
+  editing?: boolean;
+  editValue?: string;
+  onEditValueChange?: (_value: string) => void;
+  onEdit?: () => void;
+  onEditCancel?: () => void;
+  onEditSave?: () => void;
+  onDelete?: () => void;
+  onReply?: () => void;
+}) {
   return (
     <article className='rounded-[24px] bg-white px-4 py-4 shadow-[0_12px_28px_rgba(16,34,64,0.06)]'>
       <div className='flex items-start gap-3'>
@@ -603,14 +638,59 @@ export function GroupCommentCard({ comment }: { comment: GroupComment }) {
           <div className='flex items-center gap-2'>
             <span className='text-[14px] font-semibold text-[#263550]'>{comment.author}</span>
             <span className='text-[12px] text-[#9aa7bb]'>{comment.timeAgo}</span>
+            {isOwnComment && !editing && (
+              <div className='ml-auto flex items-center gap-2'>
+                <button
+                  type='button'
+                  onClick={onEdit}
+                  className='text-[11px] font-semibold uppercase tracking-[0.1em] text-[#9ca7bb] hover:text-[#61708a]'
+                >
+                  Edit
+                </button>
+                <button
+                  type='button'
+                  onClick={onDelete}
+                  className='text-[11px] font-semibold uppercase tracking-[0.1em] text-[#d16060] hover:text-[#b04040]'
+                >
+                  Delete
+                </button>
+              </div>
+            )}
           </div>
-          <p className='mt-2 text-[14px] leading-[1.55] text-[#61708a]'>{comment.message}</p>
-          <button
-            type='button'
-            className='mt-3 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#9ca7bb]'
-          >
-            Reply
-          </button>
+          {editing ? (
+            <div className='mt-2 flex items-center gap-2'>
+              <input
+                value={editValue}
+                onChange={(e) => onEditValueChange?.(e.target.value)}
+                className='min-w-0 flex-1 rounded-lg border border-[#d8e1f0] px-3 py-1.5 text-[14px] text-[#24324c] outline-none focus:border-[#0879f2]'
+              />
+              <button
+                type='button'
+                onClick={onEditSave}
+                className='text-[12px] font-bold text-[#0879f2]'
+              >
+                Save
+              </button>
+              <button
+                type='button'
+                onClick={onEditCancel}
+                className='text-[12px] font-bold text-[#9aa7bb]'
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <p className='mt-2 text-[14px] leading-[1.55] text-[#61708a]'>{comment.message}</p>
+          )}
+          {!editing && onReply && (
+            <button
+              type='button'
+              onClick={onReply}
+              className='mt-3 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#9ca7bb] hover:text-[#61708a]'
+            >
+              Reply
+            </button>
+          )}
         </div>
       </div>
     </article>
@@ -621,19 +701,32 @@ export function GroupComposer({
   value,
   onChange,
   onSubmit,
+  replyToAuthor,
+  onCancelReply,
 }: {
   value: string;
   onChange: (_value: string) => void;
   onSubmit: () => void;
+  replyToAuthor?: string | null;
+  onCancelReply?: () => void;
 }) {
   const hasValue = value.trim().length > 0;
 
   return (
     <div className='flex items-center gap-3 rounded-full bg-white px-4 py-3 shadow-[0_14px_28px_rgba(16,34,64,0.08)]'>
+      {replyToAuthor && onCancelReply ? (
+        <button
+          type='button'
+          onClick={onCancelReply}
+          className='shrink-0 rounded-full bg-[#eef2f7] px-2 py-0.5 text-[11px] font-bold text-[#8090aa]'
+        >
+          @{replyToAuthor} ✕
+        </button>
+      ) : null}
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder='Write a comment...'
+        placeholder={replyToAuthor ? `Reply to ${replyToAuthor}...` : 'Write a comment...'}
         className='min-w-0 flex-1 bg-transparent text-[14px] text-[#24324c] outline-none placeholder:text-[#a8b2c2]'
       />
       <button

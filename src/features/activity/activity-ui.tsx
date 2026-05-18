@@ -456,17 +456,26 @@ export function ActivityDetailCard({
           </h2>
           <div className='flex items-center gap-3 text-[16px] font-semibold text-[#5c6880]'>
             <div className='flex -space-x-2'>
-              {['👩🏻', '👨🏻', '🧑🏻‍💻'].map((avatar) => (
+              {(activity.members && activity.members.length > 0
+                ? activity.members.slice(0, 3)
+                : [{ profileImg: '👩🏻' }, { profileImg: '👨🏻' }, { profileImg: '🧑🏻‍💻' }]
+              ).map((m, i) => (
                 <span
-                  key={avatar}
-                  className='flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-[#e8eef9] text-[18px]'
+                  key={i}
+                  className='flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-[#e8eef9] text-[14px] font-bold text-[#143f84] overflow-hidden'
                 >
-                  {avatar}
+                  {m.profileImg && m.profileImg.startsWith('http') ? (
+                    <img src={m.profileImg} alt='' className='h-full w-full object-cover' />
+                  ) : (
+                    m.profileImg || '👤'
+                  )}
                 </span>
               ))}
-              <span className='flex h-10 min-w-10 items-center justify-center rounded-full border-2 border-white bg-[#143f84] px-2 text-[13px] font-bold text-white'>
-                +21
-              </span>
+              {activity.members && activity.members.length > 3 && (
+                <span className='flex h-10 min-w-10 items-center justify-center rounded-full border-2 border-white bg-[#143f84] px-2 text-[13px] font-bold text-white'>
+                  +{activity.members.length - 3}
+                </span>
+              )}
             </div>
             <span>{activity.maxMembers} Members Active</span>
           </div>

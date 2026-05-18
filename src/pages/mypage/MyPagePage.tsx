@@ -26,6 +26,7 @@ import { RequireAuth } from '../../features/session/RequireAuth';
 import { useSession } from '../../features/session/session-context';
 import { BellIcon, BottomTabs, ScreenFrame } from '../../features/session/ui';
 import { HeaderIconButton, SearchIcon } from '../../features/group/group-ui';
+import { SearchModal } from '../../features/search/SearchModal';
 
 function buildSelectedDayLabel(dayKey: string) {
   const [year, month, day] = dayKey.split('-').map((value) => Number(value));
@@ -69,19 +70,27 @@ function MyPagePage() {
   );
   const [schedule, setSchedule] = useState<AcademicScheduleViewModel>(() => seedSchedule);
   const [showScheduleSheet, setShowScheduleSheet] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const now = new Date();
+  const [calendarYear, setCalendarYear] = useState(now.getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState(now.getMonth() + 1);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       try {
+        const yearMonth = { year: calendarYear, month: calendarMonth };
         const [nextOverview, nextSchedule] = await Promise.all([
-          fetchMyPageOverview({
-            displayName,
-            major,
-            email: registeredEmail,
-          }),
-          fetchAcademicSchedule(),
+          fetchMyPageOverview(
+            {
+              displayName,
+              major,
+              email: registeredEmail,
+            },
+            yearMonth,
+          ),
+          fetchAcademicSchedule(yearMonth),
         ]);
 
         if (cancelled) {
@@ -101,12 +110,30 @@ function MyPagePage() {
     return () => {
       cancelled = true;
     };
-  }, [displayName, major, registeredEmail]);
+  }, [displayName, major, registeredEmail, calendarYear, calendarMonth]);
 
   const handleSelectDay = (dayKey: string) => {
     const nextSchedule = selectScheduleDay(schedule, scheduleSource, dayKey);
     setSchedule(nextSchedule);
     setShowScheduleSheet(nextSchedule.events.length > 0);
+  };
+
+  const handlePrevMonth = () => {
+    if (calendarMonth === 1) {
+      setCalendarYear((y) => y - 1);
+      setCalendarMonth(12);
+    } else {
+      setCalendarMonth((m) => m - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (calendarMonth === 12) {
+      setCalendarYear((y) => y + 1);
+      setCalendarMonth(1);
+    } else {
+      setCalendarMonth((m) => m + 1);
+    }
   };
 
   const handleLogout = async () => {
@@ -121,67 +148,72 @@ function MyPagePage() {
   };
 
   return (
-    <RequireAuth>
-      <ScreenFrame className='pb-4 pt-4'>
-        <div className='flex flex-1 flex-col'>
-          <header className='flex items-center justify-between text-[#203354]'>
-            <h1 className='text-[18px] font-extrabold tracking-[-0.04em]'>Gachon Connect</h1>
-            <div className='flex items-center gap-1'>
-              <HeaderIconButton label='Search'>
-                <SearchIcon />
-              </HeaderIconButton>
-              <HeaderIconButton label='Notifications' showBadge>
-                <BellIcon />
-              </HeaderIconButton>
-            </div>
-          </header>
+    <>
+      <RequireAuth>
+        <ScreenFrame className='pb-4 pt-4'>
+          <div className='flex flex-1 flex-col'>
+            <header className='flex items-center justify-between text-[#203354]'>
+              <h1 className='text-[18px] font-extrabold tracking-[-0.04em]'>Gachon Connect</h1>
+              <div className='flex items-center gap-1'>
+                <HeaderIconButton label='Search' onClick={() => setShowSearch(true)}>
+                  <SearchIcon />
+                </HeaderIconButton>
+                <HeaderIconButton label='Notifications' showBadge>
+                  <BellIcon />
+                </HeaderIconButton>
+              </div>
+            </header>
 
-          <main className='flex-1 space-y-7 pt-4 pb-6'>
-            <MyPageProfileHero overview={overview} />
-            <MyPageStats stats={overview.stats} />
-            <AcademicScheduleCard
-              monthLabel={schedule.monthLabel}
-              days={schedule.days}
-              onSelectDay={handleSelectDay}
-            />
-
-            <section className='space-y-3'>
-              <h2 className='text-[20px] font-extrabold tracking-[-0.04em] text-[#203354]'>
-                Account Settings
-              </h2>
-              <AccountSettingsList
-                items={accountItems}
-                onNavigate={(item) => {
-                  if (!item.href || item.disabled) {
-                    return;
-                  }
-
-                  navigate(item.href);
-                }}
+            <main className='flex-1 space-y-7 pt-4 pb-6'>
+              <MyPageProfileHero overview={overview} />
+              <MyPageStats stats={overview.stats} />
+              <AcademicScheduleCard
+                monthLabel={schedule.monthLabel}
+                days={schedule.days}
+                onSelectDay={handleSelectDay}
+                onPrevMonth={handlePrevMonth}
+                onNextMonth={handleNextMonth}
               />
-            </section>
 
-            <QuietActionButton onClick={handleLogout}>↪ Logout</QuietActionButton>
-          </main>
+              <section className='space-y-3'>
+                <h2 className='text-[20px] font-extrabold tracking-[-0.04em] text-[#203354]'>
+                  Account Settings
+                </h2>
+                <AccountSettingsList
+                  items={accountItems}
+                  onNavigate={(item) => {
+                    if (!item.href || item.disabled) {
+                      return;
+                    }
 
-          <footer className='mt-auto'>
-            <BottomTabs
-              active='mypage'
-              onNavigate={(tab) => navigateFromBottomTab(navigate, tab)}
+                    navigate(item.href);
+                  }}
+                />
+              </section>
+
+              <QuietActionButton onClick={handleLogout}>↪ Logout</QuietActionButton>
+            </main>
+
+            <footer className='mt-auto'>
+              <BottomTabs
+                active='mypage'
+                onNavigate={(tab) => navigateFromBottomTab(navigate, tab)}
+              />
+            </footer>
+          </div>
+
+          {showScheduleSheet ? (
+            <ScheduleBottomSheet
+              selectedDayLabel={schedule.selectedDayLabel}
+              events={schedule.events}
+              trendingEvent={schedule.trendingEvent}
+              onClose={() => setShowScheduleSheet(false)}
             />
-          </footer>
-        </div>
-
-        {showScheduleSheet ? (
-          <ScheduleBottomSheet
-            selectedDayLabel={schedule.selectedDayLabel}
-            events={schedule.events}
-            trendingEvent={schedule.trendingEvent}
-            onClose={() => setShowScheduleSheet(false)}
-          />
-        ) : null}
-      </ScreenFrame>
-    </RequireAuth>
+          ) : null}
+        </ScreenFrame>
+      </RequireAuth>
+      {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
+    </>
   );
 }
 
