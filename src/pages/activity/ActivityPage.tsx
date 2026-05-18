@@ -12,6 +12,7 @@ import {
   type ActivityCategory,
   type ActivityItem,
 } from '../../features/activity/activity-data';
+import { SearchModal } from '../../features/search/SearchModal';
 import {
   ActivityFeedCard,
   ActivityFilterChip,
@@ -68,6 +69,7 @@ function mapToActivityItem(a: ActivitySummaryResponse): ActivityItem {
     isHotPick: a.isHotpick,
     liked: a.isLiked ?? false,
     joinState: seatsLeft <= 0 ? 'full' : 'available',
+    members: [],
   };
 }
 
@@ -75,6 +77,7 @@ function ActivityPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeFilter, setActiveFilter] = useState<ActivityCategory | 'all'>('all');
+  const [showSearch, setShowSearch] = useState(false);
 
   const { data: activityList } = useQuery({
     queryKey: ['activities'],
@@ -145,7 +148,7 @@ function ActivityPage() {
       <ScreenFrame className='pb-4 pt-4'>
         <div className='flex flex-1 flex-col'>
           <header className='grid grid-cols-[40px_1fr_40px] items-center text-[#203354]'>
-            <HeaderIconButton label='Search'>
+            <HeaderIconButton label='Search' onClick={() => setShowSearch(true)}>
               <SearchIcon />
             </HeaderIconButton>
             <h1 className='text-center text-[18px] font-extrabold tracking-[-0.04em]'>
@@ -230,6 +233,7 @@ function ActivityPage() {
           </footer>
         </div>
       </ScreenFrame>
+      {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
     </RequireAuth>
   );
 }

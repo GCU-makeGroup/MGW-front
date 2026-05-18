@@ -6,6 +6,7 @@ import { fetchMyGroups } from '../../api/group';
 import {
   type ActivityItem,
   type ActivityCategory,
+  type ActivityGroupOption,
   type JoinMode,
 } from '../../features/activity/activity-data';
 
@@ -46,7 +47,7 @@ function formatSchedule(iso: string): string {
 
 function mapDetailToActivityItem(
   detail: ActivityDetailResponse,
-  groupOptions?: { id: number; name: string }[],
+  groupOptions?: ActivityGroupOption[],
 ): ActivityItem {
   const seatsLeft = detail.capacity - detail.currentParticipants;
   return {
@@ -67,6 +68,7 @@ function mapDetailToActivityItem(
     joinState: seatsLeft <= 0 ? 'full' : 'available',
     kakaoOpenChatLink: detail.openChatUrl,
     groupOptions: groupOptions ?? [],
+    members: detail.members ?? [],
   };
 }
 
@@ -91,7 +93,13 @@ function ActivityDetailPage() {
     enabled: !!activityId && !isNaN(numericId),
   });
 
-  const groupOptions = myGroupsData?.groups.map((g) => ({ id: g.id, name: g.name }));
+  const groupOptions = myGroupsData?.groups.map((g) => ({
+    id: String(g.id),
+    name: g.name,
+    subtitle: '',
+    members: g.currentMemberCount,
+    activeLabel: `${g.currentMemberCount}/${g.capacity}`,
+  }));
   const activity = detail ? mapDetailToActivityItem(detail, groupOptions) : null;
 
   const [overlay, setOverlay] = useState<DetailOverlay>(null);

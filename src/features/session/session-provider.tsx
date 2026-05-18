@@ -2,6 +2,7 @@ import { useReducer, type ReactNode } from 'react';
 import {
   login as loginRequest,
   signup as signupRequest,
+  savePreferences,
   type LoginRequest,
   type SignupRequest,
 } from '../../api/session';
@@ -238,6 +239,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         memberEmail: response.email,
         memberName: response.name,
       });
+
+      // Save onboarding preferences (interests + purpose)
+      if (state.preferences.interests.length > 0 || state.preferences.purpose) {
+        try {
+          await savePreferences({
+            interestKeywords: state.preferences.interests,
+            purpose: state.preferences.purpose ?? undefined,
+          });
+        } catch (error) {
+          console.error('Failed to save preferences:', error);
+        }
+      }
     },
     resetAll() {
       dispatch({ type: 'resetAll' });

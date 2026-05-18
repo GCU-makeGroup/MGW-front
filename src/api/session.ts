@@ -161,3 +161,13 @@ export async function changePassword(currentPassword: string, newPassword: strin
 export async function withdrawAccount(): Promise<void> {
   return request<void>('/auth/withdraw', { method: 'DELETE' });
 }
+
+export async function savePreferences(preferences: {
+  interestKeywords?: string[];
+  purpose?: string;
+}): Promise<void> {
+  return request<void>('/auth/preferences', {
+    method: 'POST',
+    body: JSON.stringify(preferences),
+  });
+}

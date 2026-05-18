@@ -8,6 +8,7 @@ import {
   type GroupCategoryFilter,
   type GroupItem,
 } from '../../features/group/group-data';
+import { SearchModal } from '../../features/search/SearchModal';
 import {
   CategoryPill,
   FloatingActionButton,
@@ -58,6 +59,7 @@ function mapGroupItem(item: GroupListItemResponse, index: number): GroupItem {
 function GroupPage() {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState<GroupCategoryFilter>('all');
+  const [showSearch, setShowSearch] = useState(false);
 
   const { data: groupList } = useQuery({
     queryKey: ['groups', activeFilter],
@@ -81,7 +83,7 @@ function GroupPage() {
               GachonConnect
             </h1>
             <div className='flex items-center gap-3 text-[#8090aa]'>
-              <HeaderIconButton label='Search'>
+              <HeaderIconButton label='Search' onClick={() => setShowSearch(true)}>
                 <SearchIcon />
               </HeaderIconButton>
               <HeaderIconButton label='Notifications' showBadge>
@@ -146,6 +148,7 @@ function GroupPage() {
           </footer>
         </div>
       </ScreenFrame>
+      {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
     </RequireAuth>
   );
 }

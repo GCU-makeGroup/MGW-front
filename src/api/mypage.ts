@@ -370,7 +370,7 @@ export async function fetchMyPageOverview(
           groupCount: dto.stats.groupCount,
           point: dto.stats.point,
         },
-        calendar: { year, month, selectedDate: 15, schedules: [] },
+        calendar: { year, month, selectedDate: '15', schedules: [] },
       } satisfies MyPageMainResponse;
     },
   );

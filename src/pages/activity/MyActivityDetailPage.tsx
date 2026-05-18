@@ -50,6 +50,7 @@ function mapDetailToActivityItem(detail: ActivityDetailResponse): ActivityItem {
     liked: detail.isLiked ?? false,
     joinState: seatsLeft <= 0 ? 'full' : 'available',
     kakaoOpenChatLink: detail.openChatUrl,
+    members: detail.members ?? [],
   };
 }
 

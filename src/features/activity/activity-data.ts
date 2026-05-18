@@ -20,6 +20,12 @@ export type ActivityGroupOption = {
   selected?: boolean;
 };
 
+export type ActivityMember = {
+  userId: number;
+  name: string;
+  profileImg: string;
+};
+
 export type ActivityItem = {
   id: string;
   title: string;
@@ -39,6 +45,7 @@ export type ActivityItem = {
   joinState: 'available' | 'joined' | 'full';
   kakaoOpenChatLink?: string;
   groupOptions?: ActivityGroupOption[];
+  members: ActivityMember[];
 };
 
 export type MyActivityItem = {
@@ -79,6 +86,7 @@ export const activityItems: ActivityItem[] = [
     isHotPick: true,
     liked: true,
     joinState: 'available',
+    members: [],
     groupOptions: [
       {
         id: 'neural-networks-team',
@@ -120,6 +128,7 @@ export const activityItems: ActivityItem[] = [
     imageVariant: 'summit',
     liked: true,
     joinState: 'available',
+    members: [],
   },
   {
     id: 'gachon-dev-studio-weekly-sprint',
@@ -138,6 +147,7 @@ export const activityItems: ActivityItem[] = [
     liked: false,
     joinState: 'available',
     kakaoOpenChatLink: 'https://open.kakao.com/o/gachon-dev-studio',
+    members: [],
     groupOptions: [
       {
         id: 'neural-networks-team',
@@ -179,6 +189,7 @@ export const activityItems: ActivityItem[] = [
     imageVariant: 'lab',
     liked: false,
     joinState: 'full',
+    members: [],
   },
 ];
 

@@ -98,6 +98,7 @@ const mockGroupDetail: GroupDetailResponse = {
   currentMemberCount: 0,
   commentCount: 0,
   comments: [],
+  isMember: false,
 };
 
 // ---------------------------------------------------------------------------

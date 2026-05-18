@@ -615,6 +615,7 @@ export function GroupCommentCard({
   onEditCancel,
   onEditSave,
   onDelete,
+  onReply,
 }: {
   comment: GroupComment;
   isOwnComment?: boolean;
@@ -625,6 +626,7 @@ export function GroupCommentCard({
   onEditCancel?: () => void;
   onEditSave?: () => void;
   onDelete?: () => void;
+  onReply?: () => void;
 }) {
   return (
     <article className='rounded-[24px] bg-white px-4 py-4 shadow-[0_12px_28px_rgba(16,34,64,0.06)]'>
@@ -680,6 +682,15 @@ export function GroupCommentCard({
           ) : (
             <p className='mt-2 text-[14px] leading-[1.55] text-[#61708a]'>{comment.message}</p>
           )}
+          {!editing && onReply && (
+            <button
+              type='button'
+              onClick={onReply}
+              className='mt-3 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#9ca7bb] hover:text-[#61708a]'
+            >
+              Reply
+            </button>
+          )}
         </div>
       </div>
     </article>
@@ -690,19 +701,32 @@ export function GroupComposer({
   value,
   onChange,
   onSubmit,
+  replyToAuthor,
+  onCancelReply,
 }: {
   value: string;
   onChange: (_value: string) => void;
   onSubmit: () => void;
+  replyToAuthor?: string | null;
+  onCancelReply?: () => void;
 }) {
   const hasValue = value.trim().length > 0;
 
   return (
     <div className='flex items-center gap-3 rounded-full bg-white px-4 py-3 shadow-[0_14px_28px_rgba(16,34,64,0.08)]'>
+      {replyToAuthor && onCancelReply ? (
+        <button
+          type='button'
+          onClick={onCancelReply}
+          className='shrink-0 rounded-full bg-[#eef2f7] px-2 py-0.5 text-[11px] font-bold text-[#8090aa]'
+        >
+          @{replyToAuthor} ✕
+        </button>
+      ) : null}
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder='Write a comment...'
+        placeholder={replyToAuthor ? `Reply to ${replyToAuthor}...` : 'Write a comment...'}
         className='min-w-0 flex-1 bg-transparent text-[14px] text-[#24324c] outline-none placeholder:text-[#a8b2c2]'
       />
       <button

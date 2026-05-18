@@ -15,6 +15,7 @@ import { ApiError } from '../../api/client';
 import { type GroupComment, type GroupItem, isGroupFull } from '../../features/group/group-data';
 import { navigateFromBottomTab } from '../../features/navigation/bottom-tab-navigation';
 import { useSession } from '../../features/session/session-context';
+import { SearchModal } from '../../features/search/SearchModal';
 import {
   GroupCommentCard,
   GroupComposer,
@@ -71,6 +72,7 @@ function mapCommentInfo(comment: CommentInfo): GroupComment {
     avatar: comment.author.imageUrl ?? '👤',
     timeAgo: formatTimeAgo(comment.createdAt),
     message: comment.content,
+    parentId: comment.parentId != null ? String(comment.parentId) : null,
   };
 }
 
@@ -88,6 +90,8 @@ function GroupDetailPage() {
   const [leaving, setLeaving] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [replyTo, setReplyTo] = useState<{ id: string; author: string } | null>(null);
+  const [showSearch, setShowSearch] = useState(false);
 
   const { data: detail } = useQuery({
     queryKey: ['groupDetail', numericGroupId],
@@ -114,6 +118,9 @@ function GroupDetailPage() {
       };
 
   const comments: GroupComment[] = detail?.comments.map(mapCommentInfo) ?? [];
+
+  const topLevelComments = comments.filter((c) => c.parentId === null);
+  const getReplies = (parentId: string) => comments.filter((c) => c.parentId === parentId);
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -155,8 +162,12 @@ function GroupDetailPage() {
     }
 
     try {
-      await createComment(numericGroupId, { content: comment.trim() });
+      await createComment(numericGroupId, {
+        content: comment.trim(),
+        parentId: replyTo ? Number(replyTo.id) : undefined,
+      });
       setComment('');
+      setReplyTo(null);
       queryClient.invalidateQueries({ queryKey: ['groupDetail', numericGroupId] });
     } catch (error) {
       console.error(error);
@@ -216,80 +227,106 @@ function GroupDetailPage() {
   };
 
   return (
-    <RequireAuth>
-      {joinSucceeded ? (
-        <ScreenFrame className='p-0'>
-          <GroupJoinSuccessView group={group} onBackToGroup={() => navigate('/group')} />
-        </ScreenFrame>
-      ) : (
-        <ScreenFrame className='pb-4 pt-4'>
-          <div className='flex flex-1 flex-col'>
-            <header className='flex items-center justify-between'>
-              <div className='flex items-center gap-3'>
-                <BackButton onClick={handleBack} />
-                <h1 className='text-[20px] font-bold tracking-[-0.03em] text-[#1f2b45]'>
-                  Group Detail
-                </h1>
-              </div>
-              <div className='flex items-center gap-3 text-[#8090aa]'>
-                <HeaderIconButton label='Search'>
-                  <SearchIcon />
-                </HeaderIconButton>
-                <HeaderIconButton label='Notifications' showBadge>
-                  <BellIcon />
-                </HeaderIconButton>
-              </div>
-            </header>
-
-            <main className='flex-1 overflow-y-auto pb-4 pt-6'>
-              <div className='space-y-5'>
-                <GroupDetailCard group={group} />
-                <div className='space-y-2'>
-                  {!detail?.isMember ? (
-                    <GroupJoinButton group={group} joining={joining} onJoin={handleJoin} />
-                  ) : (
-                    <GroupLeaveButton leaving={leaving} onLeave={handleLeave} />
-                  )}
-                  {joinError ? (
-                    <p className='text-center text-[13px] font-semibold text-[#d16060]'>
-                      {joinError}
-                    </p>
-                  ) : null}
+    <>
+      <RequireAuth>
+        {joinSucceeded ? (
+          <ScreenFrame className='p-0'>
+            <GroupJoinSuccessView group={group} onBackToGroup={() => navigate('/group')} />
+          </ScreenFrame>
+        ) : (
+          <ScreenFrame className='pb-4 pt-4'>
+            <div className='flex flex-1 flex-col'>
+              <header className='flex items-center justify-between'>
+                <div className='flex items-center gap-3'>
+                  <BackButton onClick={handleBack} />
+                  <h1 className='text-[20px] font-bold tracking-[-0.03em] text-[#1f2b45]'>
+                    Group Detail
+                  </h1>
                 </div>
+                <div className='flex items-center gap-3 text-[#8090aa]'>
+                  <HeaderIconButton label='Search' onClick={() => setShowSearch(true)}>
+                    <SearchIcon />
+                  </HeaderIconButton>
+                  <HeaderIconButton label='Notifications' showBadge>
+                    <BellIcon />
+                  </HeaderIconButton>
+                </div>
+              </header>
 
-                <section className='space-y-4'>
-                  <h2 className='text-[24px] font-bold tracking-[-0.04em] text-[#1f2b45]'>
-                    Comments
-                  </h2>
-                  {comments.map((item) => (
-                    <GroupCommentCard
-                      key={item.id}
-                      comment={item}
-                      isOwnComment={item.authorId === currentMemberId}
-                      editing={editingCommentId === item.id}
-                      editValue={editValue}
-                      onEditValueChange={setEditValue}
-                      onEdit={() => handleEditComment(item)}
-                      onEditCancel={handleCancelEdit}
-                      onEditSave={handleSaveEdit}
-                      onDelete={() => handleDeleteComment(item.id)}
-                    />
-                  ))}
-                </section>
+              <main className='flex-1 overflow-y-auto pb-4 pt-6'>
+                <div className='space-y-5'>
+                  <GroupDetailCard group={group} />
+                  <div className='space-y-2'>
+                    {!detail?.isMember ? (
+                      <GroupJoinButton group={group} joining={joining} onJoin={handleJoin} />
+                    ) : (
+                      <GroupLeaveButton leaving={leaving} onLeave={handleLeave} />
+                    )}
+                    {joinError ? (
+                      <p className='text-center text-[13px] font-semibold text-[#d16060]'>
+                        {joinError}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <section className='space-y-4'>
+                    <h2 className='text-[24px] font-bold tracking-[-0.04em] text-[#1f2b45]'>
+                      Comments
+                    </h2>
+                    {topLevelComments.map((item) => (
+                      <div key={item.id} className='space-y-2'>
+                        <GroupCommentCard
+                          comment={item}
+                          isOwnComment={item.authorId === currentMemberId}
+                          editing={editingCommentId === item.id}
+                          editValue={editValue}
+                          onEditValueChange={setEditValue}
+                          onEdit={() => handleEditComment(item)}
+                          onEditCancel={handleCancelEdit}
+                          onEditSave={handleSaveEdit}
+                          onDelete={() => handleDeleteComment(item.id)}
+                          onReply={() => setReplyTo({ id: item.id, author: item.author })}
+                        />
+                        {getReplies(item.id).map((reply) => (
+                          <div key={reply.id} className='ml-8'>
+                            <GroupCommentCard
+                              comment={reply}
+                              isOwnComment={reply.authorId === currentMemberId}
+                              editing={editingCommentId === reply.id}
+                              editValue={editValue}
+                              onEditValueChange={setEditValue}
+                              onEdit={() => handleEditComment(reply)}
+                              onEditCancel={handleCancelEdit}
+                              onEditSave={handleSaveEdit}
+                              onDelete={() => handleDeleteComment(reply.id)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </section>
+                </div>
+              </main>
+
+              <div className='space-y-3'>
+                <GroupComposer
+                  value={comment}
+                  onChange={setComment}
+                  onSubmit={handleSubmitComment}
+                  replyToAuthor={replyTo?.author}
+                  onCancelReply={() => setReplyTo(null)}
+                />
+                <BottomTabs
+                  active='group'
+                  onNavigate={(tab) => navigateFromBottomTab(navigate, tab)}
+                />
               </div>
-            </main>
-
-            <div className='space-y-3'>
-              <GroupComposer value={comment} onChange={setComment} onSubmit={handleSubmitComment} />
-              <BottomTabs
-                active='group'
-                onNavigate={(tab) => navigateFromBottomTab(navigate, tab)}
-              />
             </div>
-          </div>
-        </ScreenFrame>
-      )}
-    </RequireAuth>
+          </ScreenFrame>
+        )}
+      </RequireAuth>
+      {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
+    </>
   );
 }
 
