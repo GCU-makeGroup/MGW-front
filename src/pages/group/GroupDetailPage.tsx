@@ -4,19 +4,24 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fetchGroupDetail,
   joinGroup,
+  leaveGroup,
   createComment,
+  updateComment,
+  deleteComment,
   type GroupDetailResponse,
   type CommentInfo,
 } from '../../api/group';
 import { ApiError } from '../../api/client';
 import { type GroupComment, type GroupItem, isGroupFull } from '../../features/group/group-data';
 import { navigateFromBottomTab } from '../../features/navigation/bottom-tab-navigation';
+import { useSession } from '../../features/session/session-context';
 import {
   GroupCommentCard,
   GroupComposer,
   GroupDetailCard,
   GroupJoinButton,
   GroupJoinSuccessView,
+  GroupLeaveButton,
   HeaderIconButton,
   SearchIcon,
 } from '../../features/group/group-ui';
@@ -61,6 +66,7 @@ function mapDetailToGroupItem(detail: GroupDetailResponse): GroupItem {
 function mapCommentInfo(comment: CommentInfo): GroupComment {
   return {
     id: String(comment.id),
+    authorId: comment.author.id,
     author: comment.author.name,
     avatar: comment.author.imageUrl ?? '👤',
     timeAgo: formatTimeAgo(comment.createdAt),
@@ -72,11 +78,16 @@ function GroupDetailPage() {
   const navigate = useNavigate();
   const { groupId } = useParams();
   const queryClient = useQueryClient();
+  const session = useSession();
+  const currentMemberId = session.state.memberId;
   const numericGroupId = Number(groupId);
   const [comment, setComment] = useState('');
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joinSucceeded, setJoinSucceeded] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
 
   const { data: detail } = useQuery({
     queryKey: ['groupDetail', numericGroupId],
@@ -152,6 +163,58 @@ function GroupDetailPage() {
     }
   };
 
+  const handleLeave = async () => {
+    if (leaving) return;
+    if (!window.confirm('Are you sure you want to leave this group?')) return;
+
+    setLeaving(true);
+    try {
+      await leaveGroup(numericGroupId);
+      await queryClient.refetchQueries({ queryKey: ['groupDetail', numericGroupId] });
+      await queryClient.refetchQueries({ queryKey: ['groups'], type: 'all' });
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLeaving(false);
+    }
+  };
+
+  const handleEditComment = (c: GroupComment) => {
+    setEditingCommentId(c.id);
+    setEditValue(c.message);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditValue('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingCommentId || !editValue.trim()) return;
+
+    try {
+      await updateComment(numericGroupId, Number(editingCommentId), {
+        content: editValue.trim(),
+      });
+      setEditingCommentId(null);
+      setEditValue('');
+      queryClient.invalidateQueries({ queryKey: ['groupDetail', numericGroupId] });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!window.confirm('Delete this comment?')) return;
+
+    try {
+      await deleteComment(numericGroupId, Number(commentId));
+      queryClient.invalidateQueries({ queryKey: ['groupDetail', numericGroupId] });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   return (
     <RequireAuth>
       {joinSucceeded ? (
@@ -182,8 +245,10 @@ function GroupDetailPage() {
               <div className='space-y-5'>
                 <GroupDetailCard group={group} />
                 <div className='space-y-2'>
-                  {!detail?.isMember && (
+                  {!detail?.isMember ? (
                     <GroupJoinButton group={group} joining={joining} onJoin={handleJoin} />
+                  ) : (
+                    <GroupLeaveButton leaving={leaving} onLeave={handleLeave} />
                   )}
                   {joinError ? (
                     <p className='text-center text-[13px] font-semibold text-[#d16060]'>
@@ -197,7 +262,18 @@ function GroupDetailPage() {
                     Comments
                   </h2>
                   {comments.map((item) => (
-                    <GroupCommentCard key={item.id} comment={item} />
+                    <GroupCommentCard
+                      key={item.id}
+                      comment={item}
+                      isOwnComment={item.authorId === currentMemberId}
+                      editing={editingCommentId === item.id}
+                      editValue={editValue}
+                      onEditValueChange={setEditValue}
+                      onEdit={() => handleEditComment(item)}
+                      onEditCancel={handleCancelEdit}
+                      onEditSave={handleSaveEdit}
+                      onDelete={() => handleDeleteComment(item.id)}
+                    />
                   ))}
                 </section>
               </div>

@@ -22,6 +22,7 @@ export type GroupItem = {
 
 export type GroupComment = {
   id: string;
+  authorId: number;
   author: string;
   avatar: string;
   timeAgo: string;

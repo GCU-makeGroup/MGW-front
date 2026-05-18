@@ -193,3 +193,23 @@ export async function createComment(
     body: JSON.stringify(body),
   });
 }
+
+export async function updateComment(
+  groupId: number | string,
+  commentId: number,
+  body: { content: string },
+  _accessToken?: string,
+): Promise<void> {
+  return request<void>(`/groups/${groupId}/comments/${commentId}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteComment(
+  groupId: number | string,
+  commentId: number,
+  _accessToken?: string,
+): Promise<void> {
+  return request<void>(`/groups/${groupId}/comments/${commentId}`, { method: 'DELETE' });
+}

@@ -69,19 +69,26 @@ function MyPagePage() {
   );
   const [schedule, setSchedule] = useState<AcademicScheduleViewModel>(() => seedSchedule);
   const [showScheduleSheet, setShowScheduleSheet] = useState(false);
+  const now = new Date();
+  const [calendarYear, setCalendarYear] = useState(now.getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState(now.getMonth() + 1);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       try {
+        const yearMonth = { year: calendarYear, month: calendarMonth };
         const [nextOverview, nextSchedule] = await Promise.all([
-          fetchMyPageOverview({
-            displayName,
-            major,
-            email: registeredEmail,
-          }),
-          fetchAcademicSchedule(),
+          fetchMyPageOverview(
+            {
+              displayName,
+              major,
+              email: registeredEmail,
+            },
+            yearMonth,
+          ),
+          fetchAcademicSchedule(yearMonth),
         ]);
 
         if (cancelled) {
@@ -101,12 +108,30 @@ function MyPagePage() {
     return () => {
       cancelled = true;
     };
-  }, [displayName, major, registeredEmail]);
+  }, [displayName, major, registeredEmail, calendarYear, calendarMonth]);
 
   const handleSelectDay = (dayKey: string) => {
     const nextSchedule = selectScheduleDay(schedule, scheduleSource, dayKey);
     setSchedule(nextSchedule);
     setShowScheduleSheet(nextSchedule.events.length > 0);
+  };
+
+  const handlePrevMonth = () => {
+    if (calendarMonth === 1) {
+      setCalendarYear((y) => y - 1);
+      setCalendarMonth(12);
+    } else {
+      setCalendarMonth((m) => m - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (calendarMonth === 12) {
+      setCalendarYear((y) => y + 1);
+      setCalendarMonth(1);
+    } else {
+      setCalendarMonth((m) => m + 1);
+    }
   };
 
   const handleLogout = async () => {
@@ -143,6 +168,8 @@ function MyPagePage() {
               monthLabel={schedule.monthLabel}
               days={schedule.days}
               onSelectDay={handleSelectDay}
+              onPrevMonth={handlePrevMonth}
+              onNextMonth={handleNextMonth}
             />
 
             <section className='space-y-3'>

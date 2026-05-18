@@ -249,27 +249,6 @@ function buildIdentity(context?: MyPageFallbackContext) {
 // View-model mappers
 // ---------------------------------------------------------------------------
 
-function mapOverview(
-  dto: MyPageOverviewDto,
-  context?: MyPageFallbackContext,
-): MyPageOverviewViewModel {
-  const identity = buildIdentity(context);
-
-  return {
-    memberId: dto.memberId,
-    name: dto.name || identity.displayName,
-    major: identity.major,
-    verificationLabel: dto.verifiedBadgeLabel,
-    emailVerified: dto.emailVerified,
-    profileEmoji: '👨🏻‍💼',
-    stats: {
-      posts: dto.stats.postCount,
-      groups: dto.stats.groupCount,
-      points: dto.stats.point,
-    },
-  };
-}
-
 function mapOverviewFromBackend(
   data: MyPageMainResponse,
   context?: MyPageFallbackContext,
@@ -371,10 +350,13 @@ function fallbackSettingsDto(context?: MyPageFallbackContext): MyPageSettingsDto
 // API functions
 // ---------------------------------------------------------------------------
 
-export async function fetchMyPageOverview(context?: MyPageFallbackContext) {
+export async function fetchMyPageOverview(
+  context?: MyPageFallbackContext,
+  yearMonth?: { year: number; month: number },
+) {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
+  const year = yearMonth?.year ?? now.getFullYear();
+  const month = yearMonth?.month ?? now.getMonth() + 1;
 
   const data = await request<MyPageMainResponse>(
     `/mypage?year=${year}&month=${month}`,
@@ -388,7 +370,7 @@ export async function fetchMyPageOverview(context?: MyPageFallbackContext) {
           groupCount: dto.stats.groupCount,
           point: dto.stats.point,
         },
-        calendar: { year: 2024, month: 11, selectedDate: 15, schedules: [] },
+        calendar: { year, month, selectedDate: 15, schedules: [] },
       } satisfies MyPageMainResponse;
     },
   );
@@ -396,10 +378,10 @@ export async function fetchMyPageOverview(context?: MyPageFallbackContext) {
   return mapOverviewFromBackend(data, context);
 }
 
-export async function fetchAcademicSchedule() {
+export async function fetchAcademicSchedule(yearMonth?: { year: number; month: number }) {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
+  const year = yearMonth?.year ?? now.getFullYear();
+  const month = yearMonth?.month ?? now.getMonth() + 1;
 
   const schedules = await request<ScheduleResponse>(
     `/schedules?year=${year}&month=${month}`,
@@ -431,58 +413,45 @@ export async function logoutFromMyPage() {
 }
 
 export async function updateMyPageProfile(requestBody: UpdateProfileRequest) {
-  console.warn(
-    'PATCH /mypage/profile endpoint is not implemented on the backend; returning mock data.',
-  );
-  const dto = fallbackOverviewDto();
-  dto.name = requestBody.name ?? dto.name;
-  dto.profileImageUrl = requestBody.profileImageUrl ?? dto.profileImageUrl;
-  return mapOverview(dto);
+  await request<void>('/mypage/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(requestBody),
+  });
 }
 
 export async function fetchMyPageSettings(context?: MyPageFallbackContext) {
-  console.warn(
-    'GET /mypage/settings endpoint is not implemented on the backend; returning mock data.',
+  const data = await request<MyPageSettingsDto>('/mypage/settings', { method: 'GET' }, () =>
+    fallbackSettingsDto(context),
   );
-  return mapSettings(fallbackSettingsDto(context));
+  return mapSettings(data);
 }
 
 export async function updateMatchingCommunicationSettings(
   requestBody: UpdateMatchingCommunicationRequest,
 ) {
-  console.warn(
-    'PATCH /mypage/settings/matching-communication endpoint is not implemented on the backend; returning mock data.',
-  );
-  return {
-    interestKeywords: requestBody.interestKeywords ?? ['Back-end', 'Guitar', 'K-Pop'],
-    preferredLanguage: requestBody.preferredLanguage ?? ('KOREAN' as PreferredLanguage),
-  } satisfies MatchingCommunicationDto;
+  await request<void>('/mypage/settings/matching-communication', {
+    method: 'PATCH',
+    body: JSON.stringify(requestBody),
+  });
 }
 
 export async function updateNotificationSettings(requestBody: UpdateNotificationSettingsRequest) {
-  console.warn(
-    'PATCH /mypage/settings/notifications endpoint is not implemented on the backend; returning mock data.',
-  );
-  return {
-    newMessages: requestBody.newMessages ?? true,
-    groupInvites: requestBody.groupInvites ?? true,
-    postComments: requestBody.postComments ?? false,
-    etiquetteMode: requestBody.etiquetteMode ?? true,
-    etiquetteStartTime: requestBody.etiquetteStartTime ?? '23:00',
-    etiquetteEndTime: requestBody.etiquetteEndTime ?? '07:00',
-  } satisfies NotificationSettingsDto;
+  await request<void>('/mypage/settings/notifications', {
+    method: 'PATCH',
+    body: JSON.stringify(requestBody),
+  });
 }
 
 export async function updateAppLanguagePreference(requestBody: UpdateAppLanguageRequest) {
-  console.warn(
-    'PATCH /mypage/settings/app-language endpoint is not implemented on the backend; returning mock data.',
-  );
-  return { appLanguage: requestBody.appLanguage } satisfies LanguageRegionDto;
+  await request<void>('/mypage/settings/app-language', {
+    method: 'PATCH',
+    body: JSON.stringify(requestBody),
+  });
 }
 
 export async function updateDarkModePreference(requestBody: UpdateDarkModeRequest) {
-  console.warn(
-    'PATCH /mypage/settings/dark-mode endpoint is not implemented on the backend; returning mock data.',
-  );
-  return { darkMode: requestBody.darkMode } satisfies SystemSettingsDto;
+  await request<void>('/mypage/settings/dark-mode', {
+    method: 'PATCH',
+    body: JSON.stringify(requestBody),
+  });
 }
