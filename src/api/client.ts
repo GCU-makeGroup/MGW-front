@@ -111,7 +111,12 @@ export async function request<T>(
   };
 
   if (fallback) {
-    return runWithRefresh(doFetch).catch(() => fallback());
+    return runWithRefresh(doFetch).catch((error) => {
+      if (error instanceof ApiError && error.status === 401) {
+        return fallback!();
+      }
+      throw error;
+    });
   }
   return runWithRefresh(doFetch);
 }
@@ -153,7 +158,12 @@ export async function uploadFile<T>(path: string, file: File, fallback?: () => T
   };
 
   if (fallback) {
-    return runWithRefresh(doFetch).catch(() => fallback());
+    return runWithRefresh(doFetch).catch((error) => {
+      if (error instanceof ApiError && error.status === 401) {
+        return fallback!();
+      }
+      throw error;
+    });
   }
   return runWithRefresh(doFetch);
 }

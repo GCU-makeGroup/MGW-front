@@ -9,7 +9,8 @@ import { navigateFromBottomTab } from '../../features/navigation/bottom-tab-navi
 import { RequireAuth } from '../../features/session/RequireAuth';
 import { BackButton, BellIcon, BottomTabs, ScreenFrame } from '../../features/session/ui';
 import { SearchModal } from '../../features/search/SearchModal';
-import { ListSkeleton, ErrorRetry, EmptyState, showToast } from '../../features/ui';
+import { NotificationModal } from '../../features/notification/NotificationModal';
+import { ListSkeleton, ErrorRetry, EmptyState } from '../../features/ui';
 
 function mapToMyActivityItem(a: ActivitySummaryResponse, tab: MyActivityTab): MyActivityItem {
   return {
@@ -27,6 +28,7 @@ function MyActivityPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<MyActivityTab>('joined');
   const [showSearch, setShowSearch] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const {
     data: joinedList,
@@ -72,10 +74,7 @@ function MyActivityPage() {
                 <HeaderIconButton label='Search' onClick={() => setShowSearch(true)}>
                   <SearchIcon />
                 </HeaderIconButton>
-                <HeaderIconButton
-                  label='Notifications'
-                  onClick={() => showToast('Notifications coming soon.', 'success')}
-                >
+                <HeaderIconButton label='Notifications' onClick={() => setShowNotifications(true)}>
                   <BellIcon />
                 </HeaderIconButton>
                 <span className='flex h-10 w-10 items-center justify-center rounded-full bg-white text-[22px] shadow-[0_8px_20px_rgba(16,34,64,0.08)]'>
@@ -148,17 +147,16 @@ function MyActivityPage() {
                 variant='circle'
               />
             </main>
-
-            <footer>
-              <BottomTabs
-                active='activity'
-                onNavigate={(tab) => navigateFromBottomTab(navigate, tab)}
-              />
-            </footer>
           </div>
         </ScreenFrame>
+        <BottomTabs
+          fixed
+          active='activity'
+          onNavigate={(tab) => navigateFromBottomTab(navigate, tab)}
+        />
       </RequireAuth>
       {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
+      {showNotifications && <NotificationModal onClose={() => setShowNotifications(false)} />}
     </>
   );
 }

@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import type { ChangeEvent, ReactNode } from 'react';
+import type { ChangeEvent, CSSProperties, ReactNode } from 'react';
 import { useId } from 'react';
 import { shareLink } from '../ui';
 import type { GroupComment, GroupItem } from './group-data';
@@ -752,17 +752,20 @@ export function FloatingActionButton({
   onClick,
   className,
   variant = 'circle',
+  style,
 }: {
   ariaLabel: string;
   onClick: () => void;
   className?: string;
   variant?: 'circle' | 'rounded-square';
+  style?: CSSProperties;
 }) {
   return (
     <button
       type='button'
       onClick={onClick}
       aria-label={ariaLabel}
+      style={style}
       className={clsx(
         'flex items-center justify-center shadow-[0_18px_30px_rgba(46,99,246,0.28)] transition hover:-translate-y-0.5',
         variant === 'rounded-square'

@@ -16,6 +16,7 @@ import { type GroupComment, type GroupItem, isGroupFull } from '../../features/g
 import { navigateFromBottomTab } from '../../features/navigation/bottom-tab-navigation';
 import { useSession } from '../../features/session/session-context';
 import { SearchModal } from '../../features/search/SearchModal';
+import { NotificationModal } from '../../features/notification/NotificationModal';
 import {
   GroupCommentCard,
   GroupComposer,
@@ -28,18 +29,7 @@ import {
 } from '../../features/group/group-ui';
 import { RequireAuth } from '../../features/session/RequireAuth';
 import { BackButton, BellIcon, BottomTabs, ScreenFrame } from '../../features/session/ui';
-import { DetailSkeleton, ErrorRetry, showToast } from '../../features/ui';
-
-function formatTimeAgo(dateStr: string): string {
-  const diffMs = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diffMs / 60_000);
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes} min${minutes === 1 ? '' : 's'} ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
-  const days = Math.floor(hours / 24);
-  return `${days} day${days === 1 ? '' : 's'} ago`;
-}
+import { DetailSkeleton, ErrorRetry, formatTimeAgo, showToast } from '../../features/ui';
 
 function mapDetailToGroupItem(detail: GroupDetailResponse): GroupItem {
   return {
@@ -93,6 +83,7 @@ function GroupDetailPage() {
   const [editValue, setEditValue] = useState('');
   const [replyTo, setReplyTo] = useState<{ id: string; author: string } | null>(null);
   const [showSearch, setShowSearch] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const {
     data: detail,
@@ -260,7 +251,7 @@ function GroupDetailPage() {
                   <HeaderIconButton
                     label='Notifications'
                     showBadge
-                    onClick={() => showToast('Notifications coming soon.', 'success')}
+                    onClick={() => setShowNotifications(true)}
                   >
                     <BellIcon />
                   </HeaderIconButton>
@@ -348,6 +339,7 @@ function GroupDetailPage() {
         )}
       </RequireAuth>
       {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
+      {showNotifications && <NotificationModal onClose={() => setShowNotifications(false)} />}
     </>
   );
 }

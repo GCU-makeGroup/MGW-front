@@ -140,9 +140,11 @@ export function createInitialOverview(state: SessionState): MyPageOverviewViewMo
     verificationLabel: 'ACADEMIC VERIFIED',
     emailVerified: true,
     profileEmoji: '👨🏻‍💼',
+    profileImageUrl: undefined,
     stats: {
-      posts: 24,
+      posts: 0,
       groups: 8,
+      activities: 24,
       points: 1250,
     },
   };

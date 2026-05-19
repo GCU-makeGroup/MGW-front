@@ -228,6 +228,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
       // Auto-login with signup credentials
       const response = await loginRequest({ email, password });
+      persistTokens(response.accessToken, response.refreshToken);
+      persistMemberInfo(response.memberId, response.email, response.name);
       dispatch({
         type: 'setTokens',
         accessToken: response.accessToken,

@@ -163,14 +163,31 @@ function SettingsRowShell({
   );
 }
 
-export function MyPageProfileHero({ overview }: { overview: MyPageOverviewViewModel }) {
+export function MyPageProfileHero({
+  overview,
+  onImageSelect,
+}: {
+  overview: MyPageOverviewViewModel;
+  onImageSelect?: (_file: File) => void;
+}) {
   return (
     <div className='flex flex-col items-center gap-4 pt-4 text-center'>
       <div className='relative'>
         <div className='flex h-[106px] w-[106px] items-center justify-center rounded-full border-[4px] border-[#1a3764] bg-[radial-gradient(circle_at_30%_30%,#8ca6cf,#274164_72%)] text-[48px] shadow-[0_18px_34px_rgba(15,41,82,0.18)]'>
-          {overview.profileEmoji}
+          {overview.profileImageUrl ? (
+            <img
+              src={overview.profileImageUrl}
+              className='h-full w-full rounded-full object-cover'
+              alt='Profile'
+            />
+          ) : (
+            overview.profileEmoji
+          )}
         </div>
-        <div className='absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full bg-[#1c4f97] text-white shadow-[0_10px_18px_rgba(28,79,151,0.28)]'>
+        <label
+          htmlFor='profile-image-input'
+          className='absolute bottom-1 right-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-[#1c4f97] text-white shadow-[0_10px_18px_rgba(28,79,151,0.28)]'
+        >
           <svg aria-hidden='true' viewBox='0 0 24 24' className='h-4 w-4'>
             <path
               d='M8.5 7.5 10 5h4l1.5 2.5H18A2.5 2.5 0 0 1 20.5 10v6A2.5 2.5 0 0 1 18 18.5H6A2.5 2.5 0 0 1 3.5 16v-6A2.5 2.5 0 0 1 6 7.5h2.5Z'
@@ -181,7 +198,17 @@ export function MyPageProfileHero({ overview }: { overview: MyPageOverviewViewMo
             />
             <circle cx='12' cy='13' r='2.8' fill='none' stroke='currentColor' strokeWidth='1.7' />
           </svg>
-        </div>
+        </label>
+        <input
+          id='profile-image-input'
+          type='file'
+          accept='image/*'
+          className='hidden'
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onImageSelect?.(file);
+          }}
+        />
       </div>
 
       <div className='space-y-2'>
@@ -199,34 +226,66 @@ export function MyPageProfileHero({ overview }: { overview: MyPageOverviewViewMo
   );
 }
 
-export function MyPageStats({ stats }: { stats: MyPageOverviewViewModel['stats'] }) {
+export function MyPageStats({
+  stats,
+  onNavigate,
+}: {
+  stats: MyPageOverviewViewModel['stats'];
+  onNavigate?: (_path: string) => void;
+}) {
   const items = [
-    { label: 'Posts', value: stats.posts, tone: 'light' as const },
-    { label: 'Groups', value: stats.groups, tone: 'light' as const },
-    { label: 'Points', value: stats.points.toLocaleString(), tone: 'dark' as const },
+    {
+      label: 'Posts',
+      value: stats.posts,
+      path: undefined as string | undefined,
+    },
+    {
+      label: 'Groups',
+      value: stats.groups,
+      path: undefined as string | undefined,
+    },
+    {
+      label: 'Activities',
+      value: stats.activities,
+      path: '/activity/my',
+    },
   ];
 
   return (
-    <div className='grid grid-cols-3 gap-3'>
-      {items.map((item) => (
-        <CardSurface
-          key={item.label}
-          className={clsx(
-            'px-3 py-4 text-center',
-            item.tone === 'dark' ? 'bg-[#123f7a] text-white' : 'text-[#203354]',
-          )}
-        >
-          <p className='text-[20px] font-extrabold tracking-[-0.05em]'>{item.value}</p>
-          <p
-            className={clsx(
-              'mt-1 text-[10px] font-extrabold uppercase tracking-[0.2em]',
-              item.tone === 'dark' ? 'text-white/72' : 'text-[#909cb0]',
-            )}
-          >
-            {item.label}
-          </p>
-        </CardSurface>
-      ))}
+    <div className='grid grid-cols-3 gap-2'>
+      {items.map((item) => {
+        const cardContent = (
+          <>
+            <p className='text-[20px] font-extrabold tracking-[-0.05em]'>{item.value}</p>
+            <p className='mt-1 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#909cb0]'>
+              {item.label}
+            </p>
+          </>
+        );
+
+        if (item.path && onNavigate) {
+          return (
+            <CardSurface
+              key={item.label}
+              className='px-2 py-4 text-center cursor-pointer text-[#203354]'
+            >
+              <button
+                type='button'
+                onClick={() => onNavigate(item.path!)}
+                className='w-full text-center'
+              >
+                {cardContent}
+              </button>
+            </CardSurface>
+          );
+        }
+
+        return (
+          <CardSurface key={item.label} className='px-2 py-4 text-center text-[#203354]'>
+            {cardContent}
+          </CardSurface>
+        );
+      })}
     </div>
   );
 }
@@ -346,11 +405,13 @@ export function ScheduleBottomSheet({
   selectedDayLabel,
   events,
   trendingEvent,
+  loading,
   onClose,
 }: {
   selectedDayLabel: string;
   events: AcademicScheduleEventViewModel[];
   trendingEvent: AcademicScheduleViewModel['trendingEvent'];
+  loading?: boolean;
   onClose: () => void;
 }) {
   return (
@@ -366,57 +427,70 @@ export function ScheduleBottomSheet({
           </div>
 
           <div className='mt-6 space-y-4'>
-            {events.map((event) => (
-              <CardSurface
-                key={event.id}
-                className='overflow-hidden border-l-[4px] border-[#123f7a] p-4'
-              >
-                <div className='flex items-start justify-between gap-3'>
-                  <div>
-                    <span className='rounded-full bg-[#edf2fa] px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#6f7b90]'>
-                      {event.typeLabel}
-                    </span>
-                    <h3 className='mt-3 text-[17px] font-bold leading-[1.2] tracking-[-0.03em] text-[#203354]'>
-                      {event.title}
-                    </h3>
-                  </div>
-                  <button type='button' className='text-[#516077]' aria-label='More options'>
-                    •••
-                  </button>
-                </div>
-
-                <div className='mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-[14px] font-medium text-[#5f6d84]'>
-                  <span className='inline-flex items-center gap-2'>🕐 {event.timeRange}</span>
-                  <span className='inline-flex items-center gap-2'>📍 {event.location}</span>
-                </div>
-
-                <div className='mt-4 flex items-center justify-between gap-3'>
-                  <div className='flex items-center gap-3'>
-                    <div className='flex -space-x-2'>
-                      {['🧑🏻', '👩🏻', '🧑🏽'].map((avatar) => (
-                        <span
-                          key={avatar}
-                          className='flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#d9edf0] text-[13px]'
-                        >
-                          {avatar}
-                        </span>
-                      ))}
+            {loading ? (
+              <div className='py-8 text-center'>
+                <p className='text-[14px] text-[#8090aa]'>Loading events...</p>
+              </div>
+            ) : events.length === 0 ? (
+              <div className='py-8 text-center'>
+                <p className='text-[15px] font-semibold text-[#1f2b45]'>No events scheduled</p>
+                <p className='mt-1 text-[13px] text-[#8090aa]'>
+                  No activities or events for this day.
+                </p>
+              </div>
+            ) : (
+              events.map((event) => (
+                <CardSurface
+                  key={event.id}
+                  className='overflow-hidden border-l-[4px] border-[#123f7a] p-4'
+                >
+                  <div className='flex items-start justify-between gap-3'>
+                    <div>
+                      <span className='rounded-full bg-[#edf2fa] px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#6f7b90]'>
+                        {event.typeLabel}
+                      </span>
+                      <h3 className='mt-3 text-[17px] font-bold leading-[1.2] tracking-[-0.03em] text-[#203354]'>
+                        {event.title}
+                      </h3>
                     </div>
-                    <span className='text-[14px] font-semibold text-[#203354]'>
-                      {event.joiningFriendsLabel}
+                    <button type='button' className='text-[#516077]' aria-label='More options'>
+                      •••
+                    </button>
+                  </div>
+
+                  <div className='mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-[14px] font-medium text-[#5f6d84]'>
+                    <span className='inline-flex items-center gap-2'>🕐 {event.timeRange}</span>
+                    <span className='inline-flex items-center gap-2'>📍 {event.location}</span>
+                  </div>
+
+                  <div className='mt-4 flex items-center justify-between gap-3'>
+                    <div className='flex items-center gap-3'>
+                      <div className='flex -space-x-2'>
+                        {['🧑🏻', '👩🏻', '🧑🏽'].map((avatar) => (
+                          <span
+                            key={avatar}
+                            className='flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#d9edf0] text-[13px]'
+                          >
+                            {avatar}
+                          </span>
+                        ))}
+                      </div>
+                      <span className='text-[14px] font-semibold text-[#203354]'>
+                        {event.joiningFriendsLabel}
+                      </span>
+                    </div>
+                    <span
+                      className={clsx(
+                        'flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold',
+                        event.completed ? 'bg-[#123f7a] text-white' : 'bg-[#edf2fa] text-[#7f8ca2]',
+                      )}
+                    >
+                      ✓
                     </span>
                   </div>
-                  <span
-                    className={clsx(
-                      'flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold',
-                      event.completed ? 'bg-[#123f7a] text-white' : 'bg-[#edf2fa] text-[#7f8ca2]',
-                    )}
-                  >
-                    ✓
-                  </span>
-                </div>
-              </CardSurface>
-            ))}
+                </CardSurface>
+              ))
+            )}
 
             <div className='relative overflow-hidden rounded-[22px] bg-[linear-gradient(135deg,#2e9ca0_0%,#174566_100%)] p-5 text-white shadow-[0_18px_36px_rgba(16,34,64,0.12)]'>
               <div className='absolute bottom-0 right-10 text-[90px] opacity-40'>👩🏻</div>

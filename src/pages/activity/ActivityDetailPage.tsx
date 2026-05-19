@@ -5,21 +5,12 @@ import { fetchActivityDetail, joinActivity, type ActivityDetailResponse } from '
 import { fetchMyGroups } from '../../api/group';
 import { ApiError } from '../../api/client';
 import {
+  CATEGORY_MAP,
+  formatSchedule,
   type ActivityItem,
-  type ActivityCategory,
   type ActivityGroupOption,
   type JoinMode,
 } from '../../features/activity/activity-data';
-
-const CATEGORY_MAP: Record<string, ActivityCategory> = {
-  Study: 'study',
-  Language: 'language',
-  Hobby: 'hobby',
-  Sports: 'sports',
-  'AI & Tech': 'ai-tech',
-  Wellness: 'wellness',
-  Design: 'design',
-};
 import {
   ActivityDetailCard,
   ChoiceModal,
@@ -31,21 +22,6 @@ import { navigateFromBottomTab } from '../../features/navigation/bottom-tab-navi
 import { RequireAuth } from '../../features/session/RequireAuth';
 import { BottomTabs, ScreenFrame } from '../../features/session/ui';
 import { DetailSkeleton } from '../../features/ui';
-
-function formatSchedule(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  } catch {
-    return iso;
-  }
-}
 
 function mapDetailToActivityItem(
   detail: ActivityDetailResponse,
@@ -67,7 +43,13 @@ function mapDetailToActivityItem(
     imageVariant: 'studio',
     isHotPick: detail.isHotpick,
     liked: detail.isLiked ?? false,
-    joinState: seatsLeft <= 0 ? 'full' : 'available',
+    joinState: detail.isCreator
+      ? 'creator'
+      : detail.isJoined
+        ? 'joined'
+        : seatsLeft <= 0
+          ? 'full'
+          : 'available',
     kakaoOpenChatLink: detail.openChatUrl,
     groupOptions: groupOptions ?? [],
     members: detail.members ?? [],
@@ -121,7 +103,6 @@ function ActivityDetailPage() {
       setOverlay('success');
       await queryClient.invalidateQueries({ queryKey: ['activity', numericId] });
       await queryClient.invalidateQueries({ queryKey: ['activities'] });
-      await queryClient.refetchQueries({ queryKey: ['activities'] });
       await queryClient.invalidateQueries({ queryKey: ['activities', 'joined'] });
       await queryClient.invalidateQueries({ queryKey: ['activities', 'created'] });
       await queryClient.invalidateQueries({ queryKey: ['activities', 'discovery'] });

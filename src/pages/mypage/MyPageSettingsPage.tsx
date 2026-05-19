@@ -32,6 +32,7 @@ import { RequireAuth } from '../../features/session/RequireAuth';
 import { useSession } from '../../features/session/session-context';
 import { BellIcon, BottomTabs, ScreenFrame, TopBar } from '../../features/session/ui';
 import { HeaderIconButton, SearchIcon } from '../../features/group/group-ui';
+import { NotificationModal } from '../../features/notification/NotificationModal';
 import { showToast } from '../../features/ui';
 
 function MyPageSettingsPage() {
@@ -49,6 +50,7 @@ function MyPageSettingsPage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -268,7 +270,7 @@ function MyPageSettingsPage() {
                 <HeaderIconButton
                   label='Notifications'
                   showBadge
-                  onClick={() => showToast('Notifications coming soon.', 'success')}
+                  onClick={() => setShowNotifications(true)}
                 >
                   <BellIcon />
                 </HeaderIconButton>
@@ -504,6 +506,7 @@ function MyPageSettingsPage() {
           </div>
         ) : null}
       </ScreenFrame>
+      {showNotifications && <NotificationModal onClose={() => setShowNotifications(false)} />}
     </RequireAuth>
   );
 }

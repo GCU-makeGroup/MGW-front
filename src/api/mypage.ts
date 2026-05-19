@@ -1,4 +1,4 @@
-import { request } from './client';
+import { request, uploadFile } from './client';
 
 // ---------------------------------------------------------------------------
 // Backend DTO types (responses from actual endpoints)
@@ -26,6 +26,17 @@ type MyPageMainResponse = {
 
 /** Shape returned by GET /schedules?year=X&month=Y */
 type ScheduleResponse = Array<{ date: string; hasSchedule: boolean }>;
+
+/** Shape returned by GET /schedules/{date} */
+type ScheduleDetailResponse = {
+  activityId: number;
+  title: string;
+  category: string;
+  location: string;
+  schedule: string;
+  capacity: number;
+  currentParticipants: number;
+};
 
 // ---------------------------------------------------------------------------
 // Internal DTO types used by mock fallbacks (endpoints that don't exist yet)
@@ -141,9 +152,11 @@ export type MyPageOverviewViewModel = {
   verificationLabel: string;
   emailVerified: boolean;
   profileEmoji: string;
+  profileImageUrl?: string | null;
   stats: {
     posts: number;
     groups: number;
+    activities: number;
     points: number;
   };
 };
@@ -293,9 +306,11 @@ function mapOverviewFromBackend(
     verificationLabel: 'Academic Verified',
     emailVerified: true,
     profileEmoji: '👨🏻‍💼',
+    profileImageUrl: profile.imageUrl,
     stats: {
-      posts: summary.activityCount,
+      posts: 0,
       groups: summary.groupCount,
+      activities: summary.activityCount,
       points: summary.point,
     },
   };
@@ -388,7 +403,7 @@ function fallbackOverviewDto(context?: MyPageFallbackContext): MyPageOverviewDto
     emailVerified: true,
     verifiedBadgeLabel: 'Academic Verified',
     stats: {
-      postCount: 24,
+      postCount: 0,
       groupCount: 8,
       point: 1250,
     },
@@ -542,4 +557,28 @@ export async function updateDarkModePreference(requestBody: UpdateDarkModeReques
     method: 'PATCH',
     body: JSON.stringify(requestBody),
   });
+}
+
+export async function uploadProfileImage(file: File) {
+  const data = await uploadFile<{ imageUrl: string }>('/mypage/profile/image', file);
+  return data.imageUrl;
+}
+
+export async function fetchScheduleDetails(date: string) {
+  return request<ScheduleDetailResponse[]>(`/schedules/${date}`, { method: 'GET' }, () => []);
+}
+
+export function mapScheduleEvent(dto: ScheduleDetailResponse): AcademicScheduleEventViewModel {
+  const scheduleDate = new Date(dto.schedule);
+  const hours = scheduleDate.getHours().toString().padStart(2, '0');
+  const minutes = scheduleDate.getMinutes().toString().padStart(2, '0');
+  return {
+    id: String(dto.activityId),
+    typeLabel: dto.category.toUpperCase(),
+    title: dto.title,
+    timeRange: `${hours}:${minutes}`,
+    location: dto.location || 'TBD',
+    joiningFriendsLabel: `${dto.currentParticipants}/${dto.capacity} MEMBERS`,
+    completed: new Date(dto.schedule) < new Date(),
+  };
 }

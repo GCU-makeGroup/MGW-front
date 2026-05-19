@@ -15,6 +15,8 @@ export type ActivitySummaryResponse = {
   schedule: string;
   thumbnail: string;
   isHotpick: boolean;
+  isCreator: boolean;
+  isJoined: boolean;
 };
 
 export type ActivityDetailResponse = ActivitySummaryResponse & {
@@ -75,6 +77,8 @@ const mockActivityDetail: ActivityDetailResponse = {
   description: 'A collaborative session focusing on product delivery.',
   members: [],
   openChatUrl: '',
+  isCreator: false,
+  isJoined: false,
 };
 
 // ---------------------------------------------------------------------------
