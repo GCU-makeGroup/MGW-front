@@ -237,19 +237,16 @@ export function MyPageStats({
     {
       label: 'Posts',
       value: stats.posts,
-      tone: 'light' as const,
       path: undefined as string | undefined,
     },
     {
       label: 'Groups',
       value: stats.groups,
-      tone: 'light' as const,
       path: undefined as string | undefined,
     },
     {
       label: 'Activities',
       value: stats.activities,
-      tone: 'light' as const,
       path: '/activity/my',
     },
   ];
@@ -260,12 +257,7 @@ export function MyPageStats({
         const cardContent = (
           <>
             <p className='text-[20px] font-extrabold tracking-[-0.05em]'>{item.value}</p>
-            <p
-              className={clsx(
-                'mt-1 text-[10px] font-extrabold uppercase tracking-[0.2em]',
-                item.tone === 'dark' ? 'text-white/72' : 'text-[#909cb0]',
-              )}
-            >
+            <p className='mt-1 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#909cb0]'>
               {item.label}
             </p>
           </>
@@ -273,13 +265,7 @@ export function MyPageStats({
 
         if (item.path && onNavigate) {
           return (
-            <CardSurface
-              key={item.label}
-              className={clsx(
-                'px-2 py-4 text-center cursor-pointer',
-                item.tone === 'dark' ? 'bg-[#123f7a] text-white' : 'text-[#203354]',
-              )}
-            >
+            <CardSurface key={item.label} className='px-2 py-4 text-center cursor-pointer text-[#203354]'>
               <button
                 type='button'
                 onClick={() => onNavigate(item.path!)}
@@ -292,13 +278,7 @@ export function MyPageStats({
         }
 
         return (
-          <CardSurface
-            key={item.label}
-            className={clsx(
-              'px-2 py-4 text-center',
-              item.tone === 'dark' ? 'bg-[#123f7a] text-white' : 'text-[#203354]',
-            )}
-          >
+          <CardSurface key={item.label} className='px-2 py-4 text-center text-[#203354]'>
             {cardContent}
           </CardSurface>
         );
