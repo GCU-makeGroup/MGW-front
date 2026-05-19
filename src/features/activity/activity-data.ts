@@ -7,6 +7,31 @@ export type ActivityCategory =
   | 'hobby'
   | 'sports';
 
+export const CATEGORY_MAP: Record<string, ActivityCategory> = {
+  Study: 'study',
+  Language: 'language',
+  Hobby: 'hobby',
+  Sports: 'sports',
+  'AI & Tech': 'ai-tech',
+  Wellness: 'wellness',
+  Design: 'design',
+};
+
+export function formatSchedule(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+}
+
 export type JoinMode = 'individual' | 'group';
 export type MyActivityTab = 'joined' | 'created';
 export type MyActivityStatus = 'active' | 'completed' | 'upcoming';
@@ -42,7 +67,7 @@ export type ActivityItem = {
   imageVariant: 'founders' | 'summit' | 'studio' | 'lab';
   isHotPick?: boolean;
   liked: boolean;
-  joinState: 'available' | 'joined' | 'full';
+  joinState: 'available' | 'joined' | 'full' | 'creator';
   kakaoOpenChatLink?: string;
   groupOptions?: ActivityGroupOption[];
   members: ActivityMember[];

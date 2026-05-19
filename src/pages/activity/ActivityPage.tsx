@@ -9,10 +9,13 @@ import {
 } from '../../api/activity';
 import {
   activityFilters,
+  CATEGORY_MAP,
+  formatSchedule,
   type ActivityCategory,
   type ActivityItem,
 } from '../../features/activity/activity-data';
 import { SearchModal } from '../../features/search/SearchModal';
+import { NotificationModal } from '../../features/notification/NotificationModal';
 import {
   ActivityFeedCard,
   ActivityFilterChip,
@@ -24,32 +27,7 @@ import { RequireAuth } from '../../features/session/RequireAuth';
 import { BottomTabs, ScreenFrame } from '../../features/session/ui';
 import { FloatingActionButton, HeaderIconButton, SearchIcon } from '../../features/group/group-ui';
 import { BellIcon } from '../../features/session/ui';
-import { ListSkeleton, ErrorRetry, EmptyState, showToast } from '../../features/ui';
-
-const CATEGORY_MAP: Record<string, ActivityCategory> = {
-  Study: 'study',
-  Language: 'language',
-  Hobby: 'hobby',
-  Sports: 'sports',
-  'AI & Tech': 'ai-tech',
-  Wellness: 'wellness',
-  Design: 'design',
-};
-
-function formatSchedule(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  } catch {
-    return iso;
-  }
-}
+import { ListSkeleton, ErrorRetry, EmptyState } from '../../features/ui';
 
 function mapToActivityItem(a: ActivitySummaryResponse): ActivityItem {
   const seatsLeft = a.capacity - a.currentParticipants;
@@ -69,7 +47,13 @@ function mapToActivityItem(a: ActivitySummaryResponse): ActivityItem {
     imageVariant: 'studio',
     isHotPick: a.isHotpick,
     liked: a.isLiked ?? false,
-    joinState: seatsLeft <= 0 ? 'full' : 'available',
+    joinState: a.isCreator
+      ? 'creator'
+      : a.isJoined
+        ? 'joined'
+        : seatsLeft <= 0
+          ? 'full'
+          : 'available',
     members: [],
   };
 }
@@ -79,6 +63,7 @@ function ActivityPage() {
   const queryClient = useQueryClient();
   const [activeFilter, setActiveFilter] = useState<ActivityCategory | 'all'>('all');
   const [showSearch, setShowSearch] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const {
     data: activityList,
@@ -160,10 +145,7 @@ function ActivityPage() {
             <h1 className='text-center text-[18px] font-extrabold tracking-[-0.04em]'>
               GachonConnect
             </h1>
-            <HeaderIconButton
-              label='Notifications'
-              onClick={() => showToast('Notifications coming soon.', 'success')}
-            >
+            <HeaderIconButton label='Notifications' onClick={() => setShowNotifications(true)}>
               <BellIcon />
             </HeaderIconButton>
           </header>
@@ -249,19 +231,19 @@ function ActivityPage() {
             <FloatingActionButton
               ariaLabel='Create activity'
               onClick={() => navigate('/activity/new')}
-              className='absolute bottom-[82px] right-1 bg-[#0d3f7c] text-white shadow-[0_18px_30px_rgba(13,63,124,0.28)]'
+              className='fixed bottom-[82px] z-10 bg-[#0d3f7c] text-white shadow-[0_18px_30px_rgba(13,63,124,0.28)]'
+              style={{ right: 'max(1rem, calc(50% - 199px))' }}
             />
           </main>
-
-          <footer className='mt-4'>
-            <BottomTabs
-              active='activity'
-              onNavigate={(tab) => navigateFromBottomTab(navigate, tab)}
-            />
-          </footer>
         </div>
       </ScreenFrame>
+      <BottomTabs
+        fixed
+        active='activity'
+        onNavigate={(tab) => navigateFromBottomTab(navigate, tab)}
+      />
       {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
+      {showNotifications && <NotificationModal onClose={() => setShowNotifications(false)} />}
     </RequireAuth>
   );
 }

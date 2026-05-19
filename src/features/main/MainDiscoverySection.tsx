@@ -2,6 +2,7 @@ import clsx from 'clsx';
 import type { ReactNode } from 'react';
 import { startTransition, useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { fetchActivities, likeActivity, type ActivitySummaryResponse } from '../../api/activity';
 import { type DiscoveryCard, type MainDiscoveryAction } from './discovery-data';
 
@@ -199,10 +200,11 @@ export function MainDiscoverySection() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [pendingAction, setPendingAction] = useState<MainDiscoveryAction | null>(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: activityList } = useQuery({
     queryKey: ['activities', 'discovery'],
-    queryFn: () => fetchActivities({ limit: 20 }),
+    queryFn: () => fetchActivities({ limit: 5 }),
   });
 
   const cards: DiscoveryCard[] = useMemo(
@@ -264,7 +266,7 @@ export function MainDiscoverySection() {
     <section className='space-y-4'>
       <div className='flex items-center justify-between px-1'>
         <h2 className='text-[28px] font-extrabold tracking-[-0.05em] text-[#11254b]'>
-          Group Discovery
+          Activity Discovery
         </h2>
         <div className='flex items-center gap-1 text-[#ca3535]'>
           {cards.map((card, index) => (
@@ -279,7 +281,14 @@ export function MainDiscoverySection() {
         </div>
       </div>
 
-      <div className='relative h-[520px]'>
+      <div
+        className='relative h-[520px]'
+        onClick={() => {
+          if (visibleCards.length >= 3 && !pendingAction) {
+            navigate(`/activity/${visibleCards[0].id}`);
+          }
+        }}
+      >
         {visibleCards.length >= 3 ? (
           <>
             <CardSurface card={visibleCards[2]} layer='back' action={null} />

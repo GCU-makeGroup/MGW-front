@@ -540,10 +540,12 @@ export function BottomTabs({
   active = 'main',
   onNavigate,
   tone = 'default',
+  fixed = false,
 }: {
   active?: BottomTabKey;
   onNavigate?: (_tab: BottomTabKey) => void;
   tone?: 'default' | 'subtle';
+  fixed?: boolean;
 }) {
   const tabClass = (key: typeof active) =>
     clsx(
@@ -551,7 +553,7 @@ export function BottomTabs({
       active === key ? 'text-[#123f7a]' : tone === 'subtle' ? 'text-slate-300' : 'text-slate-400',
     );
 
-  return (
+  const nav = (
     <nav
       className={clsx(
         'rounded-[26px] px-3 py-2 backdrop-blur',
@@ -584,6 +586,16 @@ export function BottomTabs({
       </div>
     </nav>
   );
+
+  if (fixed) {
+    return (
+      <div className='fixed bottom-0 left-0 right-0 z-40 px-6 pb-4 pointer-events-none'>
+        <div className='mx-auto max-w-[430px] pointer-events-auto'>{nav}</div>
+      </div>
+    );
+  }
+
+  return nav;
 }
 
 export function DecorativeOnboardingCard({

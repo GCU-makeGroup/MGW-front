@@ -8,7 +8,9 @@ import {
   type GroupCategoryFilter,
   type GroupItem,
 } from '../../features/group/group-data';
+import { formatTimeAgo } from '../../features/ui';
 import { SearchModal } from '../../features/search/SearchModal';
+import { NotificationModal } from '../../features/notification/NotificationModal';
 import {
   CategoryPill,
   FloatingActionButton,
@@ -18,24 +20,13 @@ import {
 } from '../../features/group/group-ui';
 import { RequireAuth } from '../../features/session/RequireAuth';
 import { BellIcon, BottomTabs, ScreenFrame } from '../../features/session/ui';
-import { ListSkeleton, ErrorRetry, EmptyState, showToast } from '../../features/ui';
+import { ListSkeleton, ErrorRetry, EmptyState } from '../../features/ui';
 
 const filterToCategoryIds: Record<Exclude<GroupCategoryFilter, 'all'>, number[]> = {
   study: [1],
   project: [2],
   it: [3],
 };
-
-function formatTimeAgo(updatedAt: string): string {
-  const diffMs = Date.now() - new Date(updatedAt).getTime();
-  const minutes = Math.floor(diffMs / 60_000);
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes} min${minutes === 1 ? '' : 's'} ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
-  const days = Math.floor(hours / 24);
-  return `${days} day${days === 1 ? '' : 's'} ago`;
-}
 
 const themeEmojis = ['🧑🏻‍🎨', '👩🏻‍💻', '👨🏻', '🧑🏻‍🔬', '👩🏻‍🦱', '👨🏻‍🏫'];
 
@@ -61,6 +52,7 @@ function GroupPage() {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState<GroupCategoryFilter>('all');
   const [showSearch, setShowSearch] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const {
     data: groupList,
@@ -95,7 +87,7 @@ function GroupPage() {
               <HeaderIconButton
                 label='Notifications'
                 showBadge
-                onClick={() => showToast('Notifications coming soon.', 'success')}
+                onClick={() => setShowNotifications(true)}
               >
                 <BellIcon />
               </HeaderIconButton>
@@ -150,19 +142,18 @@ function GroupPage() {
 
               <FloatingActionButton
                 onClick={() => navigate('/group/new')}
-                className='absolute bottom-[82px] right-1'
+                className='fixed bottom-[82px] z-10'
                 ariaLabel='Create group post'
                 variant='rounded-square'
+                style={{ right: 'max(1rem, calc(50% - 199px))' }}
               />
             </div>
           </main>
-
-          <footer className='mt-4'>
-            <BottomTabs active='group' onNavigate={(tab) => navigateFromBottomTab(navigate, tab)} />
-          </footer>
         </div>
       </ScreenFrame>
+      <BottomTabs fixed active='group' onNavigate={(tab) => navigateFromBottomTab(navigate, tab)} />
       {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
+      {showNotifications && <NotificationModal onClose={() => setShowNotifications(false)} />}
     </RequireAuth>
   );
 }

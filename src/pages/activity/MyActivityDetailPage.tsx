@@ -1,36 +1,15 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchActivityDetail, type ActivityDetailResponse } from '../../api/activity';
-import { type ActivityItem, type ActivityCategory } from '../../features/activity/activity-data';
-
-const CATEGORY_MAP: Record<string, ActivityCategory> = {
-  Study: 'study',
-  Language: 'language',
-  Hobby: 'hobby',
-  Sports: 'sports',
-  'AI & Tech': 'ai-tech',
-  Wellness: 'wellness',
-  Design: 'design',
-};
+import {
+  CATEGORY_MAP,
+  formatSchedule,
+  type ActivityItem,
+} from '../../features/activity/activity-data';
 import { ManagedActivityDetailCard } from '../../features/activity/activity-ui';
 import { RequireAuth } from '../../features/session/RequireAuth';
 import { ScreenFrame } from '../../features/session/ui';
 import { DetailSkeleton, shareLink } from '../../features/ui';
-
-function formatSchedule(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  } catch {
-    return iso;
-  }
-}
 
 function mapDetailToActivityItem(detail: ActivityDetailResponse): ActivityItem {
   const seatsLeft = detail.capacity - detail.currentParticipants;

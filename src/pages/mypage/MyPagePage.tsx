@@ -3,7 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import {
   fetchAcademicSchedule,
   fetchMyPageOverview,
+  fetchScheduleDetails,
   logoutFromMyPage,
+  mapScheduleEvent,
+  uploadProfileImage,
+  updateMyPageProfile,
   type AcademicScheduleViewModel,
   type MyPageOverviewViewModel,
 } from '../../api/mypage';
@@ -27,7 +31,7 @@ import { useSession } from '../../features/session/session-context';
 import { BellIcon, BottomTabs, ScreenFrame } from '../../features/session/ui';
 import { HeaderIconButton, SearchIcon } from '../../features/group/group-ui';
 import { SearchModal } from '../../features/search/SearchModal';
-import { showToast } from '../../features/ui';
+import { NotificationModal } from '../../features/notification/NotificationModal';
 
 function buildSelectedDayLabel(dayKey: string) {
   const [year, month, day] = dayKey.split('-').map((value) => Number(value));
@@ -71,7 +75,9 @@ function MyPagePage() {
   );
   const [schedule, setSchedule] = useState<AcademicScheduleViewModel>(() => seedSchedule);
   const [showScheduleSheet, setShowScheduleSheet] = useState(false);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const now = new Date();
   const [calendarYear, setCalendarYear] = useState(now.getFullYear());
   const [calendarMonth, setCalendarMonth] = useState(now.getMonth() + 1);
@@ -113,10 +119,21 @@ function MyPagePage() {
     };
   }, [displayName, major, registeredEmail, calendarYear, calendarMonth]);
 
-  const handleSelectDay = (dayKey: string) => {
+  const handleSelectDay = async (dayKey: string) => {
     const nextSchedule = selectScheduleDay(schedule, scheduleSource, dayKey);
     setSchedule(nextSchedule);
-    setShowScheduleSheet(nextSchedule.events.length > 0);
+    setShowScheduleSheet(true);
+    setScheduleLoading(true);
+
+    try {
+      const details = await fetchScheduleDetails(dayKey);
+      const events = details.map(mapScheduleEvent);
+      setSchedule((prev) => ({ ...prev, events }));
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setScheduleLoading(false);
+    }
   };
 
   const handlePrevMonth = () => {
@@ -148,6 +165,16 @@ function MyPagePage() {
     }
   };
 
+  const handleImageSelect = async (file: File) => {
+    try {
+      const imageUrl = await uploadProfileImage(file);
+      await updateMyPageProfile({ profileImageUrl: imageUrl });
+      setOverview((prev) => ({ ...prev, profileImageUrl: imageUrl }));
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   return (
     <>
       <RequireAuth>
@@ -162,7 +189,7 @@ function MyPagePage() {
                 <HeaderIconButton
                   label='Notifications'
                   showBadge
-                  onClick={() => showToast('Notifications coming soon.', 'success')}
+                  onClick={() => setShowNotifications(true)}
                 >
                   <BellIcon />
                 </HeaderIconButton>
@@ -170,8 +197,8 @@ function MyPagePage() {
             </header>
 
             <main className='flex-1 space-y-7 pt-4 pb-6'>
-              <MyPageProfileHero overview={overview} />
-              <MyPageStats stats={overview.stats} />
+              <MyPageProfileHero overview={overview} onImageSelect={handleImageSelect} />
+              <MyPageStats stats={overview.stats} onNavigate={(path) => navigate(path)} />
               <AcademicScheduleCard
                 monthLabel={schedule.monthLabel}
                 days={schedule.days}
@@ -198,13 +225,6 @@ function MyPagePage() {
 
               <QuietActionButton onClick={handleLogout}>↪ Logout</QuietActionButton>
             </main>
-
-            <footer className='mt-auto'>
-              <BottomTabs
-                active='mypage'
-                onNavigate={(tab) => navigateFromBottomTab(navigate, tab)}
-              />
-            </footer>
           </div>
 
           {showScheduleSheet ? (
@@ -212,12 +232,19 @@ function MyPagePage() {
               selectedDayLabel={schedule.selectedDayLabel}
               events={schedule.events}
               trendingEvent={schedule.trendingEvent}
+              loading={scheduleLoading}
               onClose={() => setShowScheduleSheet(false)}
             />
           ) : null}
         </ScreenFrame>
+        <BottomTabs
+          fixed
+          active='mypage'
+          onNavigate={(tab) => navigateFromBottomTab(navigate, tab)}
+        />
       </RequireAuth>
       {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
+      {showNotifications && <NotificationModal onClose={() => setShowNotifications(false)} />}
     </>
   );
 }

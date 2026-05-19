@@ -116,14 +116,10 @@ export async function resendEmailCode(requestBody: EmailCodeRequest): Promise<vo
 }
 
 export async function verifyEmailCode(requestBody: EmailCodeVerifyRequest): Promise<void> {
-  return request<void>(
-    ENDPOINTS.verifyEmailCode,
-    {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    },
-    () => undefined,
-  );
+  return request<void>(ENDPOINTS.verifyEmailCode, {
+    method: 'POST',
+    body: JSON.stringify(requestBody),
+  });
 }
 
 export async function refreshAccessToken(
