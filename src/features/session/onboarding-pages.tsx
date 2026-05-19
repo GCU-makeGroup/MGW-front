@@ -92,9 +92,7 @@ export function LoginPage() {
             }
           />
           <div className='flex justify-end'>
-            <LinkButton onClick={() => window.alert('비밀번호 찾기는 추후 연결됩니다.')}>
-              Forgot password?
-            </LinkButton>
+            <LinkButton onClick={() => {}}>Forgot password? (Coming soon)</LinkButton>
           </div>
 
           {error ? <InlineErrorMessage message={error} /> : null}

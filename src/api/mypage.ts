@@ -488,8 +488,8 @@ export async function fetchAcademicSchedule(yearMonth?: { year: number; month: n
     events: [],
     trendingEvent: {
       badgeLabel: 'HOT TRENDING',
-      title: 'Career Fair 2023',
-      location: 'Main Plaza',
+      title: 'No upcoming events',
+      location: '',
     },
   } satisfies AcademicScheduleViewModel;
 }

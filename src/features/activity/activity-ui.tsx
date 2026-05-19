@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import type { ReactNode } from 'react';
+import { shareLink } from '../ui';
 import type {
   ActivityGroupOption,
   ActivityItem,
@@ -520,6 +521,7 @@ export function ActivityDetailCard({
         <div className='flex items-center gap-4'>
           <button
             type='button'
+            onClick={() => shareLink(activity.title, window.location.href)}
             className='flex h-14 w-14 items-center justify-center rounded-full border border-[#d8e1f0] text-[#708096]'
             aria-label='Share activity'
           >
@@ -598,17 +600,24 @@ export function ManagedActivityDetailCard({
           </h1>
           <div className='flex items-center gap-4 text-[18px] text-[#5c6778]'>
             <div className='flex -space-x-2'>
-              {['👩🏽', '👩🏾', '👨🏻‍💻'].map((avatar) => (
+              {(activity.members ?? []).slice(0, 3).map((member) => (
                 <span
-                  key={avatar}
-                  className='flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-[#e8eef9] text-[17px]'
+                  key={member.userId}
+                  className='flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-[#e8eef9] text-[14px] font-semibold text-[#203354]'
                 >
-                  {avatar}
+                  {member.name.charAt(0).toUpperCase()}
                 </span>
               ))}
-              <span className='flex h-9 min-w-9 items-center justify-center rounded-full border-2 border-white bg-[#0d3f7c] px-2 text-[13px] font-bold text-white'>
-                +21
-              </span>
+              {(activity.members?.length ?? 0) > 3 ? (
+                <span className='flex h-9 min-w-9 items-center justify-center rounded-full border-2 border-white bg-[#0d3f7c] px-2 text-[13px] font-bold text-white'>
+                  +{(activity.members?.length ?? 0) - 3}
+                </span>
+              ) : null}
+              {(activity.members?.length ?? 0) === 0 ? (
+                <span className='flex h-9 min-w-9 items-center justify-center rounded-full border-2 border-white bg-[#0d3f7c] px-2 text-[13px] font-bold text-white'>
+                  {activity.maxMembers}
+                </span>
+              ) : null}
             </div>
             <span>{activity.maxMembers} Members Active</span>
           </div>

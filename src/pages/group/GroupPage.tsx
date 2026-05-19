@@ -18,6 +18,7 @@ import {
 } from '../../features/group/group-ui';
 import { RequireAuth } from '../../features/session/RequireAuth';
 import { BellIcon, BottomTabs, ScreenFrame } from '../../features/session/ui';
+import { ListSkeleton, ErrorRetry, EmptyState, showToast } from '../../features/ui';
 
 const filterToCategoryIds: Record<Exclude<GroupCategoryFilter, 'all'>, number[]> = {
   study: [1],
@@ -61,7 +62,12 @@ function GroupPage() {
   const [activeFilter, setActiveFilter] = useState<GroupCategoryFilter>('all');
   const [showSearch, setShowSearch] = useState(false);
 
-  const { data: groupList } = useQuery({
+  const {
+    data: groupList,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['groups', activeFilter],
     queryFn: () =>
       fetchGroups({
@@ -86,7 +92,11 @@ function GroupPage() {
               <HeaderIconButton label='Search' onClick={() => setShowSearch(true)}>
                 <SearchIcon />
               </HeaderIconButton>
-              <HeaderIconButton label='Notifications' showBadge>
+              <HeaderIconButton
+                label='Notifications'
+                showBadge
+                onClick={() => showToast('Notifications coming soon.', 'success')}
+              >
                 <BellIcon />
               </HeaderIconButton>
             </div>
@@ -115,23 +125,27 @@ function GroupPage() {
               </div>
 
               <div className='space-y-4 pb-24'>
-                {groups.map((group) => (
-                  <GroupFeedCard
-                    key={group.id}
-                    group={group}
-                    onClick={() => navigate(`/group/${group.id}`)}
-                  />
-                ))}
-                {groups.length === 0 ? (
-                  <div className='rounded-[28px] bg-white px-5 py-7 text-center shadow-[0_18px_36px_rgba(16,34,64,0.07)]'>
-                    <p className='text-[17px] font-bold tracking-[-0.03em] text-[#1f2b45]'>
-                      No groups in this category yet
-                    </p>
-                    <p className='mt-2 text-[14px] leading-[1.5] text-[#7b879b]'>
-                      Try another filter or create the first group post for this topic.
-                    </p>
-                  </div>
-                ) : null}
+                {isLoading ? (
+                  <ListSkeleton count={4} />
+                ) : isError ? (
+                  <ErrorRetry message='Failed to load groups.' onRetry={() => refetch()} />
+                ) : (
+                  <>
+                    {groups.map((group) => (
+                      <GroupFeedCard
+                        key={group.id}
+                        group={group}
+                        onClick={() => navigate(`/group/${group.id}`)}
+                      />
+                    ))}
+                    {groups.length === 0 ? (
+                      <EmptyState
+                        title='No groups in this category yet'
+                        description='Try another filter or create the first group post for this topic.'
+                      />
+                    ) : null}
+                  </>
+                )}
               </div>
 
               <FloatingActionButton

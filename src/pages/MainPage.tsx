@@ -4,6 +4,7 @@ import { navigateFromBottomTab } from '../features/navigation/bottom-tab-navigat
 import { RequireAuth } from '../features/session/RequireAuth';
 import { useSession } from '../features/session/session-context';
 import { BellIcon, BottomTabs, ScreenFrame } from '../features/session/ui';
+import { showToast } from '../features/ui';
 
 function MainPage() {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ function MainPage() {
             </h1>
             <button
               type='button'
+              onClick={() => showToast('Notifications coming soon.', 'success')}
               className='flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#123f7a] shadow-[0_10px_20px_rgba(16,34,64,0.08)]'
               aria-label='Notifications'
             >

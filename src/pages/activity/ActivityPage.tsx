@@ -24,6 +24,7 @@ import { RequireAuth } from '../../features/session/RequireAuth';
 import { BottomTabs, ScreenFrame } from '../../features/session/ui';
 import { FloatingActionButton, HeaderIconButton, SearchIcon } from '../../features/group/group-ui';
 import { BellIcon } from '../../features/session/ui';
+import { ListSkeleton, ErrorRetry, EmptyState, showToast } from '../../features/ui';
 
 const CATEGORY_MAP: Record<string, ActivityCategory> = {
   Study: 'study',
@@ -79,7 +80,12 @@ function ActivityPage() {
   const [activeFilter, setActiveFilter] = useState<ActivityCategory | 'all'>('all');
   const [showSearch, setShowSearch] = useState(false);
 
-  const { data: activityList } = useQuery({
+  const {
+    data: activityList,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['activities'],
     queryFn: () => fetchActivities(),
   });
@@ -154,7 +160,10 @@ function ActivityPage() {
             <h1 className='text-center text-[18px] font-extrabold tracking-[-0.04em]'>
               GachonConnect
             </h1>
-            <HeaderIconButton label='Notifications'>
+            <HeaderIconButton
+              label='Notifications'
+              onClick={() => showToast('Notifications coming soon.', 'success')}
+            >
               <BellIcon />
             </HeaderIconButton>
           </header>
@@ -170,7 +179,11 @@ function ActivityPage() {
                   <h2 className='text-[28px] font-extrabold tracking-[-0.05em] text-[#203354]'>
                     Hot pick Activity
                   </h2>
-                  <button type='button' className='text-[15px] font-bold text-[#6d7a90]'>
+                  <button
+                    type='button'
+                    onClick={() => setActiveFilter('all')}
+                    className='text-[15px] font-bold text-[#6d7a90]'
+                  >
                     See all
                   </button>
                 </div>
@@ -192,29 +205,44 @@ function ActivityPage() {
                 <h2 className='text-[28px] font-extrabold tracking-[-0.05em] text-[#203354]'>
                   Available Activity
                 </h2>
-                <div className='hide-scrollbar flex gap-2 overflow-x-auto pb-1'>
-                  {activityFilters.map((filter) => (
-                    <ActivityFilterChip
-                      key={filter.value}
-                      label={filter.label}
-                      active={activeFilter === filter.value}
-                      onClick={() => setActiveFilter(filter.value)}
-                    />
-                  ))}
-                </div>
-                <div className='space-y-5'>
-                  {visibleActivities.map((activity) => (
-                    <ActivityFeedCard
-                      key={activity.id}
-                      activity={{
-                        ...activity,
-                        liked: likedOverrides[activity.id] ?? activity.liked,
-                      }}
-                      onOpen={() => navigate(`/activity/${activity.id}`)}
-                      onToggleLike={() => toggleLike(activity.id)}
-                    />
-                  ))}
-                </div>
+                {isLoading ? (
+                  <ListSkeleton count={4} />
+                ) : isError ? (
+                  <ErrorRetry message='Failed to load activities.' onRetry={() => refetch()} />
+                ) : (
+                  <>
+                    <div className='hide-scrollbar flex gap-2 overflow-x-auto pb-1'>
+                      {activityFilters.map((filter) => (
+                        <ActivityFilterChip
+                          key={filter.value}
+                          label={filter.label}
+                          active={activeFilter === filter.value}
+                          onClick={() => setActiveFilter(filter.value)}
+                        />
+                      ))}
+                    </div>
+                    <div className='space-y-5'>
+                      {visibleActivities.length > 0 ? (
+                        visibleActivities.map((activity) => (
+                          <ActivityFeedCard
+                            key={activity.id}
+                            activity={{
+                              ...activity,
+                              liked: likedOverrides[activity.id] ?? activity.liked,
+                            }}
+                            onOpen={() => navigate(`/activity/${activity.id}`)}
+                            onToggleLike={() => toggleLike(activity.id)}
+                          />
+                        ))
+                      ) : (
+                        <EmptyState
+                          title='No activities found'
+                          description='Try a different filter or check back later.'
+                        />
+                      )}
+                    </div>
+                  </>
+                )}
               </section>
             </div>
 
