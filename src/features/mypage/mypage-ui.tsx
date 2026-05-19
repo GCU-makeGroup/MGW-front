@@ -265,7 +265,10 @@ export function MyPageStats({
 
         if (item.path && onNavigate) {
           return (
-            <CardSurface key={item.label} className='px-2 py-4 text-center cursor-pointer text-[#203354]'>
+            <CardSurface
+              key={item.label}
+              className='px-2 py-4 text-center cursor-pointer text-[#203354]'
+            >
               <button
                 type='button'
                 onClick={() => onNavigate(item.path!)}
