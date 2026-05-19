@@ -15,6 +15,7 @@ const CATEGORY_MAP: Record<string, ActivityCategory> = {
 import { ManagedActivityDetailCard } from '../../features/activity/activity-ui';
 import { RequireAuth } from '../../features/session/RequireAuth';
 import { ScreenFrame } from '../../features/session/ui';
+import { DetailSkeleton, shareLink } from '../../features/ui';
 
 function formatSchedule(iso: string): string {
   try {
@@ -80,7 +81,7 @@ function MyActivityDetailPage() {
       <RequireAuth>
         <ScreenFrame className='bg-[#9aa8b8] px-5 pb-8 pt-10'>
           <div className='flex flex-1 items-center justify-center'>
-            <p className='text-[#6d7a90]'>Loading...</p>
+            <DetailSkeleton className='w-full' />
           </div>
         </ScreenFrame>
       </RequireAuth>
@@ -94,9 +95,7 @@ function MyActivityDetailPage() {
           <ManagedActivityDetailCard
             activity={activity}
             onClose={() => navigate('/activity/my')}
-            onShare={() => {
-              void navigator.clipboard?.writeText(window.location.href);
-            }}
+            onShare={() => activity && shareLink(activity.title, window.location.href)}
             onOpenChat={handleOpenChat}
           />
         </main>

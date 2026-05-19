@@ -28,6 +28,7 @@ import {
 } from '../../features/group/group-ui';
 import { RequireAuth } from '../../features/session/RequireAuth';
 import { BackButton, BellIcon, BottomTabs, ScreenFrame } from '../../features/session/ui';
+import { DetailSkeleton, ErrorRetry, showToast } from '../../features/ui';
 
 function formatTimeAgo(dateStr: string): string {
   const diffMs = Date.now() - new Date(dateStr).getTime();
@@ -93,7 +94,12 @@ function GroupDetailPage() {
   const [replyTo, setReplyTo] = useState<{ id: string; author: string } | null>(null);
   const [showSearch, setShowSearch] = useState(false);
 
-  const { data: detail } = useQuery({
+  const {
+    data: detail,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['groupDetail', numericGroupId],
     queryFn: () => fetchGroupDetail(numericGroupId),
     enabled: Number.isFinite(numericGroupId),
@@ -171,6 +177,7 @@ function GroupDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['groupDetail', numericGroupId] });
     } catch (error) {
       console.error(error);
+      showToast('Failed to post comment.');
     }
   };
 
@@ -185,6 +192,7 @@ function GroupDetailPage() {
       await queryClient.refetchQueries({ queryKey: ['groups'], type: 'all' });
     } catch (error) {
       console.error(error);
+      showToast('Failed to leave group.');
     } finally {
       setLeaving(false);
     }
@@ -212,6 +220,7 @@ function GroupDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['groupDetail', numericGroupId] });
     } catch (error) {
       console.error(error);
+      showToast('Failed to save edit.');
     }
   };
 
@@ -223,6 +232,7 @@ function GroupDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['groupDetail', numericGroupId] });
     } catch (error) {
       console.error(error);
+      showToast('Failed to delete comment.');
     }
   };
 
@@ -247,7 +257,11 @@ function GroupDetailPage() {
                   <HeaderIconButton label='Search' onClick={() => setShowSearch(true)}>
                     <SearchIcon />
                   </HeaderIconButton>
-                  <HeaderIconButton label='Notifications' showBadge>
+                  <HeaderIconButton
+                    label='Notifications'
+                    showBadge
+                    onClick={() => showToast('Notifications coming soon.', 'success')}
+                  >
                     <BellIcon />
                   </HeaderIconButton>
                 </div>
@@ -255,56 +269,64 @@ function GroupDetailPage() {
 
               <main className='flex-1 overflow-y-auto pb-4 pt-6'>
                 <div className='space-y-5'>
-                  <GroupDetailCard group={group} />
-                  <div className='space-y-2'>
-                    {!detail?.isMember ? (
-                      <GroupJoinButton group={group} joining={joining} onJoin={handleJoin} />
-                    ) : (
-                      <GroupLeaveButton leaving={leaving} onLeave={handleLeave} />
-                    )}
-                    {joinError ? (
-                      <p className='text-center text-[13px] font-semibold text-[#d16060]'>
-                        {joinError}
-                      </p>
-                    ) : null}
-                  </div>
+                  {isLoading ? (
+                    <DetailSkeleton />
+                  ) : isError ? (
+                    <ErrorRetry message='Failed to load group details.' onRetry={() => refetch()} />
+                  ) : (
+                    <>
+                      <GroupDetailCard group={group} />
+                      <div className='space-y-2'>
+                        {!detail?.isMember ? (
+                          <GroupJoinButton group={group} joining={joining} onJoin={handleJoin} />
+                        ) : (
+                          <GroupLeaveButton leaving={leaving} onLeave={handleLeave} />
+                        )}
+                        {joinError ? (
+                          <p className='text-center text-[13px] font-semibold text-[#d16060]'>
+                            {joinError}
+                          </p>
+                        ) : null}
+                      </div>
 
-                  <section className='space-y-4'>
-                    <h2 className='text-[24px] font-bold tracking-[-0.04em] text-[#1f2b45]'>
-                      Comments
-                    </h2>
-                    {topLevelComments.map((item) => (
-                      <div key={item.id} className='space-y-2'>
-                        <GroupCommentCard
-                          comment={item}
-                          isOwnComment={item.authorId === currentMemberId}
-                          editing={editingCommentId === item.id}
-                          editValue={editValue}
-                          onEditValueChange={setEditValue}
-                          onEdit={() => handleEditComment(item)}
-                          onEditCancel={handleCancelEdit}
-                          onEditSave={handleSaveEdit}
-                          onDelete={() => handleDeleteComment(item.id)}
-                          onReply={() => setReplyTo({ id: item.id, author: item.author })}
-                        />
-                        {getReplies(item.id).map((reply) => (
-                          <div key={reply.id} className='ml-8'>
+                      <section className='space-y-4'>
+                        <h2 className='text-[24px] font-bold tracking-[-0.04em] text-[#1f2b45]'>
+                          Comments
+                        </h2>
+                        {topLevelComments.map((item) => (
+                          <div key={item.id} className='space-y-2'>
                             <GroupCommentCard
-                              comment={reply}
-                              isOwnComment={reply.authorId === currentMemberId}
-                              editing={editingCommentId === reply.id}
+                              comment={item}
+                              isOwnComment={item.authorId === currentMemberId}
+                              editing={editingCommentId === item.id}
                               editValue={editValue}
                               onEditValueChange={setEditValue}
-                              onEdit={() => handleEditComment(reply)}
+                              onEdit={() => handleEditComment(item)}
                               onEditCancel={handleCancelEdit}
                               onEditSave={handleSaveEdit}
-                              onDelete={() => handleDeleteComment(reply.id)}
+                              onDelete={() => handleDeleteComment(item.id)}
+                              onReply={() => setReplyTo({ id: item.id, author: item.author })}
                             />
+                            {getReplies(item.id).map((reply) => (
+                              <div key={reply.id} className='ml-8'>
+                                <GroupCommentCard
+                                  comment={reply}
+                                  isOwnComment={reply.authorId === currentMemberId}
+                                  editing={editingCommentId === reply.id}
+                                  editValue={editValue}
+                                  onEditValueChange={setEditValue}
+                                  onEdit={() => handleEditComment(reply)}
+                                  onEditCancel={handleCancelEdit}
+                                  onEditSave={handleSaveEdit}
+                                  onDelete={() => handleDeleteComment(reply.id)}
+                                />
+                              </div>
+                            ))}
                           </div>
                         ))}
-                      </div>
-                    ))}
-                  </section>
+                      </section>
+                    </>
+                  )}
                 </div>
               </main>
 

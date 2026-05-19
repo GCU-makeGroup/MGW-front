@@ -29,6 +29,17 @@ export type ActivityListResponse = {
   nextCursor: string | null;
 };
 
+export type UpdateActivityRequest = {
+  title: string;
+  categoryIds: number[];
+  maxMembers: number;
+  schedule: string;
+  description: string;
+  openchatUrl: string;
+  thumbnailUrl: string;
+  location: string;
+};
+
 export type CreateActivityRequest = {
   title: string;
   categoryIds: number[];
@@ -170,4 +181,22 @@ export async function uploadActivityImage(file: File): Promise<{ thumbnailUrl: s
   return uploadFile<{ thumbnailUrl: string }>('/activities/images', file, () => ({
     thumbnailUrl: '',
   }));
+}
+
+export async function updateActivity(
+  activityId: number | string,
+  body: UpdateActivityRequest,
+  _accessToken?: string,
+): Promise<{ activityId: number }> {
+  return request<{ activityId: number }>(`/activities/${activityId}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteActivity(
+  activityId: number | string,
+  _accessToken?: string,
+): Promise<{ activityId: number }> {
+  return request<{ activityId: number }>(`/activities/${activityId}`, { method: 'DELETE' });
 }

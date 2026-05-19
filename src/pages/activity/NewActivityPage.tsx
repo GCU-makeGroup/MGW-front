@@ -12,6 +12,7 @@ import {
 } from '../../features/activity/activity-ui';
 import { RequireAuth } from '../../features/session/RequireAuth';
 import { ScreenFrame } from '../../features/session/ui';
+import { showToast } from '../../features/ui';
 import {
   CalendarIcon,
   CoverImageField,
@@ -40,6 +41,7 @@ function NewActivityPage() {
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [coverImagePreviewUrl, setCoverImagePreviewUrl] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const canCreate =
     title.trim().length > 0 &&
@@ -61,10 +63,11 @@ function NewActivityPage() {
   }, [coverImageFile]);
 
   const handleCreate = async () => {
-    if (!canCreate) {
+    if (!canCreate || creating) {
       return;
     }
 
+    setCreating(true);
     try {
       let thumbnailUrl = '';
       if (coverImageFile) {
@@ -91,7 +94,9 @@ function NewActivityPage() {
       setShowSuccessModal(true);
     } catch (error) {
       console.error(error);
-      window.alert('활동 생성에 실패했습니다. 잠시 후 다시 시도해주세요.');
+      showToast('Failed to create activity. Please try again.');
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -216,10 +221,10 @@ function NewActivityPage() {
               onClick={() => {
                 void handleCreate();
               }}
-              disabled={!canCreate}
+              disabled={!canCreate || creating}
               className='inline-flex h-14 flex-[1.45] items-center justify-center rounded-full bg-[#0d3f7c] text-[17px] font-bold text-white shadow-[0_18px_30px_rgba(13,63,124,0.24)] disabled:opacity-60'
             >
-              Create Activity
+              {creating ? 'Creating...' : 'Create Activity'}
             </button>
           </footer>
 

@@ -27,6 +27,7 @@ import { useSession } from '../../features/session/session-context';
 import { BellIcon, BottomTabs, ScreenFrame } from '../../features/session/ui';
 import { HeaderIconButton, SearchIcon } from '../../features/group/group-ui';
 import { SearchModal } from '../../features/search/SearchModal';
+import { showToast } from '../../features/ui';
 
 function buildSelectedDayLabel(dayKey: string) {
   const [year, month, day] = dayKey.split('-').map((value) => Number(value));
@@ -158,7 +159,11 @@ function MyPagePage() {
                 <HeaderIconButton label='Search' onClick={() => setShowSearch(true)}>
                   <SearchIcon />
                 </HeaderIconButton>
-                <HeaderIconButton label='Notifications' showBadge>
+                <HeaderIconButton
+                  label='Notifications'
+                  showBadge
+                  onClick={() => showToast('Notifications coming soon.', 'success')}
+                >
                   <BellIcon />
                 </HeaderIconButton>
               </div>

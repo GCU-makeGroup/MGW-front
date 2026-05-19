@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import type { ChangeEvent, ReactNode } from 'react';
 import { useId } from 'react';
+import { shareLink } from '../ui';
 import type { GroupComment, GroupItem } from './group-data';
 import { isGroupFull } from './group-data';
 
@@ -499,6 +500,7 @@ export function GroupDetailCard({ group }: { group: GroupItem }) {
         </div>
         <button
           type='button'
+          onClick={() => shareLink(group.title, window.location.href)}
           className='rounded-full p-1 text-[#9aa7bb] transition hover:bg-slate-100'
           aria-label='Share group'
         >

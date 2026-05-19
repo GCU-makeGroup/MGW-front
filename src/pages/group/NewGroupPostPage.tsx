@@ -15,6 +15,7 @@ import {
 } from '../../features/group/group-ui';
 import { RequireAuth } from '../../features/session/RequireAuth';
 import { BottomTabs, ScreenFrame } from '../../features/session/ui';
+import { showToast } from '../../features/ui';
 
 const categoryToId: Record<(typeof newPostCategories)[number], number> = {
   Study: 1,
@@ -84,7 +85,7 @@ function NewGroupPostPage() {
       navigate('/group');
     } catch (error) {
       console.error(error);
-      window.alert('그룹 생성에 실패했습니다. 잠시 후 다시 시도해주세요.');
+      showToast('Failed to create group. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -105,7 +106,7 @@ function NewGroupPostPage() {
               disabled={!canSubmit}
               className='font-bold text-[#1967d2] disabled:text-[#9eb3cf]'
             >
-              Post
+              {submitting ? 'Posting...' : 'Post'}
             </button>
           </header>
 

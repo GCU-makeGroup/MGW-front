@@ -214,3 +214,18 @@ export async function deleteComment(
 ): Promise<void> {
   return request<void>(`/groups/${groupId}/comments/${commentId}`, { method: 'DELETE' });
 }
+
+export async function updateGroup(
+  groupId: number | string,
+  body: CreateGroupRequest,
+  _accessToken?: string,
+): Promise<{ groupId: number }> {
+  return request<{ groupId: number }>(`/groups/${groupId}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteGroup(groupId: number | string, _accessToken?: string): Promise<void> {
+  return request<void>(`/groups/${groupId}`, { method: 'DELETE' });
+}

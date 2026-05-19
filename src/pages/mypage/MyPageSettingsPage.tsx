@@ -32,6 +32,7 @@ import { RequireAuth } from '../../features/session/RequireAuth';
 import { useSession } from '../../features/session/session-context';
 import { BellIcon, BottomTabs, ScreenFrame, TopBar } from '../../features/session/ui';
 import { HeaderIconButton, SearchIcon } from '../../features/group/group-ui';
+import { showToast } from '../../features/ui';
 
 function MyPageSettingsPage() {
   const navigate = useNavigate();
@@ -67,6 +68,7 @@ function MyPageSettingsPage() {
         setSettings(nextSettings);
       } catch (error) {
         console.error(error);
+        showToast('Failed to load settings.');
       }
     }
 
@@ -96,6 +98,7 @@ function MyPageSettingsPage() {
       });
     } catch (error) {
       console.error(error);
+      showToast('Failed to update language preference.');
       setSettings((current) => ({
         ...current,
         matchingCommunication: {
@@ -123,6 +126,7 @@ function MyPageSettingsPage() {
       });
     } catch (error) {
       console.error(error);
+      showToast('Failed to update keywords.');
       setSettings((current) => ({
         ...current,
         matchingCommunication: {
@@ -152,6 +156,7 @@ function MyPageSettingsPage() {
       await updateNotificationSettings(nextNotifications);
     } catch (error) {
       console.error(error);
+      showToast('Failed to update notification settings.');
       setSettings((current) => ({
         ...current,
         notifications: previous,
@@ -176,6 +181,7 @@ function MyPageSettingsPage() {
       });
     } catch (error) {
       console.error(error);
+      showToast('Failed to update app language.');
       setSettings((current) => ({
         ...current,
         languageRegion: {
@@ -201,6 +207,7 @@ function MyPageSettingsPage() {
       });
     } catch (error) {
       console.error(error);
+      showToast('Failed to update dark mode.');
       setSettings((current) => ({
         ...current,
         system: {
@@ -239,6 +246,7 @@ function MyPageSettingsPage() {
       await withdrawAccount();
     } catch (error) {
       console.error(error);
+      showToast('Failed to deactivate account.');
     } finally {
       actions.resetAll();
       navigate('/onboard/login', { replace: true });
@@ -257,7 +265,11 @@ function MyPageSettingsPage() {
                 <HeaderIconButton label='Search'>
                   <SearchIcon />
                 </HeaderIconButton>
-                <HeaderIconButton label='Notifications' showBadge>
+                <HeaderIconButton
+                  label='Notifications'
+                  showBadge
+                  onClick={() => showToast('Notifications coming soon.', 'success')}
+                >
                   <BellIcon />
                 </HeaderIconButton>
               </>
@@ -366,9 +378,7 @@ function MyPageSettingsPage() {
                   studentId={settings.accountSecurity.studentId}
                   department={settings.accountSecurity.department}
                   onReverify={() => {
-                    setInfoMessage(
-                      '학적 재인증 API는 문서 확정 후 연결할 수 있도록 자리만 준비했다.',
-                    );
+                    showToast('Academic re-verification is coming soon.');
                   }}
                 />
                 <SettingsLinkRow
@@ -385,19 +395,10 @@ function MyPageSettingsPage() {
                 <SettingsToggleRow
                   icon='🛡️'
                   title='Two-Factor Authentication'
-                  description='Extra security via student email'
-                  enabled={settings.accountSecurity.twoFactorEnabled}
-                  onToggle={(value) => {
-                    setSettings((current) => ({
-                      ...current,
-                      accountSecurity: {
-                        ...current.accountSecurity,
-                        twoFactorEnabled: value,
-                      },
-                    }));
-                    setInfoMessage(
-                      '2차 인증 API는 문서 확정 전이라 현재는 프론트 상태만 반영한다.',
-                    );
+                  description='Coming soon'
+                  enabled={false}
+                  onToggle={() => {
+                    showToast('Two-factor authentication is coming soon.');
                   }}
                 />
               </div>
@@ -423,7 +424,7 @@ function MyPageSettingsPage() {
                 }}
                 className='text-[16px] font-semibold text-[#203354]'
               >
-                Sign Out
+                Delete Account
               </button>
             </div>
             <SignOutFooter />

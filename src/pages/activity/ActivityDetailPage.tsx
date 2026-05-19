@@ -30,6 +30,7 @@ import {
 import { navigateFromBottomTab } from '../../features/navigation/bottom-tab-navigation';
 import { RequireAuth } from '../../features/session/RequireAuth';
 import { BottomTabs, ScreenFrame } from '../../features/session/ui';
+import { DetailSkeleton } from '../../features/ui';
 
 function formatSchedule(iso: string): string {
   try {
@@ -160,7 +161,7 @@ function ActivityDetailPage() {
       <RequireAuth>
         <ScreenFrame className='pb-4 pt-4'>
           <div className='flex flex-1 items-center justify-center'>
-            <p className='text-[#6d7a90]'>Loading...</p>
+            <DetailSkeleton className='w-full' />
           </div>
         </ScreenFrame>
       </RequireAuth>

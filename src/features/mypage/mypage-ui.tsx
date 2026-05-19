@@ -645,7 +645,7 @@ export function SignOutFooter() {
   return (
     <div className='space-y-5 pt-2 text-center'>
       <p className='text-[10px] font-bold uppercase tracking-[0.2em] text-[#c0c7d4]'>
-        Gachon Connect v2.4.4-academic
+        Gachon Connect v1.0.0
       </p>
     </div>
   );
@@ -688,8 +688,8 @@ export function DangerConfirmationModal({
               Confirm Deactivation
             </h2>
             <p className='mx-auto max-w-[18ch] text-[16px] leading-[1.5] text-[#66748b]'>
-              Are you sure you want to sign out? To confirm, please enter your registered university
-              email address.
+              Are you sure you want to delete your account? This action cannot be undone. To
+              confirm, please enter your registered university email address.
             </p>
           </div>
 

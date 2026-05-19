@@ -9,6 +9,7 @@ import { navigateFromBottomTab } from '../../features/navigation/bottom-tab-navi
 import { RequireAuth } from '../../features/session/RequireAuth';
 import { BackButton, BellIcon, BottomTabs, ScreenFrame } from '../../features/session/ui';
 import { SearchModal } from '../../features/search/SearchModal';
+import { ListSkeleton, ErrorRetry, EmptyState, showToast } from '../../features/ui';
 
 function mapToMyActivityItem(a: ActivitySummaryResponse, tab: MyActivityTab): MyActivityItem {
   return {
@@ -27,12 +28,22 @@ function MyActivityPage() {
   const [activeTab, setActiveTab] = useState<MyActivityTab>('joined');
   const [showSearch, setShowSearch] = useState(false);
 
-  const { data: joinedList } = useQuery({
+  const {
+    data: joinedList,
+    isLoading: joinedLoading,
+    isError: joinedError,
+    refetch: refetchJoined,
+  } = useQuery({
     queryKey: ['activities', 'joined'],
     queryFn: () => fetchActivities({ scope: 'joined' }),
   });
 
-  const { data: createdList } = useQuery({
+  const {
+    data: createdList,
+    isLoading: createdLoading,
+    isError: createdError,
+    refetch: refetchCreated,
+  } = useQuery({
     queryKey: ['activities', 'created'],
     queryFn: () => fetchActivities({ scope: 'created' }),
   });
@@ -61,7 +72,10 @@ function MyActivityPage() {
                 <HeaderIconButton label='Search' onClick={() => setShowSearch(true)}>
                   <SearchIcon />
                 </HeaderIconButton>
-                <HeaderIconButton label='Notifications'>
+                <HeaderIconButton
+                  label='Notifications'
+                  onClick={() => showToast('Notifications coming soon.', 'success')}
+                >
                   <BellIcon />
                 </HeaderIconButton>
                 <span className='flex h-10 w-10 items-center justify-center rounded-full bg-white text-[22px] shadow-[0_8px_20px_rgba(16,34,64,0.08)]'>
@@ -89,25 +103,41 @@ function MyActivityPage() {
                 </section>
 
                 <section className='space-y-4'>
-                  {visibleItems.map((item) => (
-                    <MyActivityListCard
-                      key={`${item.tab}-${item.id}`}
-                      item={{ ...item, liked: likedState[item.id] ?? item.liked }}
-                      mode={activeTab}
-                      onOpen={() => navigate(`/activity/my/${item.id}`)}
-                      onAction={() => {
-                        if (activeTab === 'joined') {
-                          setLikedState((prev) => ({
-                            ...prev,
-                            [item.id]: !prev[item.id],
-                          }));
-                          return;
-                        }
-
-                        navigate('/activity/new');
-                      }}
+                  {(activeTab === 'joined' ? joinedLoading : createdLoading) ? (
+                    <ListSkeleton count={3} />
+                  ) : (activeTab === 'joined' ? joinedError : createdError) ? (
+                    <ErrorRetry
+                      message='Failed to load activities.'
+                      onRetry={() => (activeTab === 'joined' ? refetchJoined() : refetchCreated())}
                     />
-                  ))}
+                  ) : visibleItems.length > 0 ? (
+                    visibleItems.map((item) => (
+                      <MyActivityListCard
+                        key={`${item.tab}-${item.id}`}
+                        item={{ ...item, liked: likedState[item.id] ?? item.liked }}
+                        mode={activeTab}
+                        onOpen={() => navigate(`/activity/my/${item.id}`)}
+                        onAction={() => {
+                          if (activeTab === 'joined') {
+                            setLikedState((prev) => ({
+                              ...prev,
+                              [item.id]: !prev[item.id],
+                            }));
+                            return;
+                          }
+
+                          navigate('/activity/new');
+                        }}
+                      />
+                    ))
+                  ) : (
+                    <EmptyState
+                      title={
+                        activeTab === 'joined' ? 'No joined activities' : 'No created activities'
+                      }
+                      description='Activities you join or create will appear here.'
+                    />
+                  )}
                 </section>
               </div>
 
